@@ -22,7 +22,7 @@ var app = builder.Build();
 app.MapPost("/login", async (UserCredentials credentials, IAuthService auth)
     => await auth.Login(credentials.Login, credentials.Password) is { } token
         ? Results.Ok(new JwtToken(token))
-        : Results.NotFound());
+        : Results.Unauthorized());
 
 app.MapPost("/reg", async (UserCredentials credentials, IAuthService auth)
         => await auth.Register(credentials.Login, credentials.Password)
@@ -36,6 +36,4 @@ public record UserCredentials(string Login, string Password);
 public record JwtToken(string Token);
 
 [JsonSerializable(typeof(UserCredentials[]))]
-internal partial class AppJsonSerializerContext : JsonSerializerContext
-{
-}
+internal partial class AppJsonSerializerContext : JsonSerializerContext;
