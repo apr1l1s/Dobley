@@ -15,6 +15,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
     private const int SALT_SIZE = 16; // Размер соли (в байтах)
     private const int HASH_SIZE = 32; // Размер хэша (в байтах)
     private const int ITERATIONS = 100_000; // Количество итераций
+    private const int TOKEN_LIFETIME_MINUTES = 360;
 
     public async Task<bool> Register(string login, string password)
     {
@@ -35,7 +36,6 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
         }
 
         return GenerateToken(user);
-        ; // JWT или другой механизм
     }
 
     private string GenerateToken(User user)
@@ -51,10 +51,10 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
         };
 
         var token = new JwtSecurityToken(
-            issuer: "your-auth-service", // Издатель токена
-            audience: "your-audience", // Аудитория
+            issuer: "your-auth-service",
+            audience: "your-audience",
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1), // Время жизни токена
+            expires: DateTime.UtcNow.AddMinutes(TOKEN_LIFETIME_MINUTES),
             signingCredentials: credentials
         );
 
@@ -63,10 +63,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
 
     public string Hash(string password)
     {
-        // Генерация случайной соли
         byte[] salt = RandomNumberGenerator.GetBytes(SALT_SIZE);
-
-        // Хэширование пароля с солью
         byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
             password,
             salt,
@@ -75,20 +72,19 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
             HASH_SIZE
         );
 
-        // Объединяем соль и хэш для хранения
         return Convert.ToBase64String(salt) + "." + Convert.ToBase64String(hash);
     }
 
     public bool Verify(string password, string hash)
     {
-        // Разделяем хэш на соль и хэшированное значение
         var parts = hash.Split('.');
-        if (parts.Length != 2) return false;
+        if (parts.Length != 2)
+        {
+            return false;
+        }
 
         byte[] salt = Convert.FromBase64String(parts[0]);
         byte[] expectedHash = Convert.FromBase64String(parts[1]);
-
-        // Хэшируем введённый пароль с той же солью
         byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(
             password,
             salt,
@@ -97,7 +93,6 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
             expectedHash.Length
         );
 
-        // Сравниваем хэши
         return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
     }
 }
