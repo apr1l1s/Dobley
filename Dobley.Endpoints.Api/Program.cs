@@ -47,14 +47,17 @@ app.MapGet("/health", () => Results.Ok());
 app.MapGet("/test", () => Results.Ok()).RequireAuthorization();
 
 var productsApi = app.MapGroup("/products");
-productsApi.MapGet("/", async ([FromServices] IProductRepository products) =>
-await products.GetPaginatedCollection(new ProductFilter(), 1, 10) is { } collection
-    ? Results.Ok(collection)
-    : Results.NotFound());
+productsApi.MapGet("/", async ([FromServices] IProductRepository products, [FromQuery] int pageIndex = 1,
+            [FromQuery] int pageSize = 10)
+        => await products.GetPaginatedCollection(new ProductFilter(), pageIndex, pageSize) is { } collection
+            ? Results.Ok(collection)
+            : Results.NotFound())
+    .RequireAuthorization();
 
-productsApi.MapGet("/{id}", async (int id, [FromServices] IProductRepository products) =>
-await products.GetItemNullable(id) is { } product
-    ? Results.Ok(product)
-    : Results.NotFound());
+productsApi.MapGet("/{id}", async (int id, [FromServices] IProductRepository products)
+        => await products.GetItemNullable(id) is { } product
+            ? Results.Ok(product)
+            : Results.NotFound())
+    .RequireAuthorization();
 
 app.Run();
