@@ -1,8 +1,51 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dobley.Domain", "Dobley.Domain", "{15FA0803-4945-4C6D-9D51-2B60EF544C6B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dobley.Data", "Dobley.Data", "{5C1E9A9F-C76C-4E28-B9DD-738E9336F96A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dobley.Endpoints", "Dobley.Endpoints", "{85B66326-42B6-4968-B7FC-617D16D6DC59}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Domain.Core", "Dobley.Domain.Core\Dobley.Domain.Core.csproj", "{886302C3-72CC-4B36-8D11-316762020A90}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Data.Core", "Dobley.Data.Core\Dobley.Data.Core.csproj", "{21F040BC-AB64-42F8-B9C2-C0BB456F28E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Endpoints.Api", "Dobley.Endpoints.Api\Dobley.Endpoints.Api.csproj", "{502250DA-2094-4065-8811-907626174D3A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C7E07F47-8218-4A0D-ABBC-B35C3E862E3F}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Endpoints.Auth", "Dobley.Endpoints.Auth\Dobley.Endpoints.Auth.csproj", "{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{886302C3-72CC-4B36-8D11-316762020A90} = {15FA0803-4945-4C6D-9D51-2B60EF544C6B}
+		{21F040BC-AB64-42F8-B9C2-C0BB456F28E1} = {5C1E9A9F-C76C-4E28-B9DD-738E9336F96A}
+		{502250DA-2094-4065-8811-907626174D3A} = {85B66326-42B6-4968-B7FC-617D16D6DC59}
+		{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201} = {85B66326-42B6-4968-B7FC-617D16D6DC59}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{886302C3-72CC-4B36-8D11-316762020A90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{886302C3-72CC-4B36-8D11-316762020A90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{886302C3-72CC-4B36-8D11-316762020A90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{886302C3-72CC-4B36-8D11-316762020A90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21F040BC-AB64-42F8-B9C2-C0BB456F28E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21F040BC-AB64-42F8-B9C2-C0BB456F28E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21F040BC-AB64-42F8-B9C2-C0BB456F28E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21F040BC-AB64-42F8-B9C2-C0BB456F28E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{502250DA-2094-4065-8811-907626174D3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{502250DA-2094-4065-8811-907626174D3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{502250DA-2094-4065-8811-907626174D3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{502250DA-2094-4065-8811-907626174D3A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

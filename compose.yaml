@@ -1,0 +1,67 @@
+﻿services:
+  dobley.endpoints.api:
+    image: dobley.endpoints.api
+    container_name: dobley.endpoints.api
+    build:
+      context: .
+      dockerfile: Dobley.Endpoints.Api/Dockerfile
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
+      DB_NAME: postgres
+      SECRET_KEY: ${SECRET_KEY:-ThisIsAVeryLongSecretKeyThatIsAtLeast32BytesLong}
+      ASPNETCORE_URLS: "http://0.0.0.0:${API_PORT:-5001}"
+    networks:
+      - dobley-network
+    ports:
+      - "${API_PORT:-5001}:${API_PORT:-5001}"
+    depends_on:
+      - dobley.endpoints.auth
+      - dobley.databases.base
+
+  dobley.endpoints.auth:
+    image: dobley.endpoints.auth
+    container_name: dobley.endpoints.auth
+    build:
+      context: .
+      dockerfile: Dobley.Endpoints.Auth/Dockerfile
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
+      DB_NAME: postgres
+      SECRET_KEY: ${SECRET_KEY:-ThisIsAVeryLongSecretKeyThatIsAtLeast32BytesLong}
+      ASPNETCORE_URLS: "http://0.0.0.0:${AUTH_PORT:-5002}"
+    networks:
+      - dobley-network
+    ports:
+      - "${AUTH_PORT:-5002}:${AUTH_PORT:-5002}"
+    depends_on:
+      - dobley.databases.base
+
+  dobley.databases.base:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+      POSTGRES_DB: postgres
+    volumes:
+      - /var/lib/postgres
+    networks:
+      - dobley-network
+    ports:
+      - "${AUTH_PORT:-5432}:${AUTH_PORT:-5432}"
+    restart: always
+
+networks:
+  dobley-network:
+    driver: bridge
+
+volumes:
+  dobley_databases_volume:
+    name: /var/lib/postgres
+    driver: local

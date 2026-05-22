@@ -1,87 +1,61 @@
-# Build
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-build/
-publish/
+# Ignore .DS_Store files on macOS
+.DS_Store
 
-# Visual Studio
-.vs/
-*.user
+# Ignore Visual Studio and Rider temporary files
 *.suo
+*.user
 *.userosscache
 *.sln.docstates
 
-# Rider / JetBrains
-.idea/
-*.sln.iml
+# Ignore build output folders
+bin/
+obj/
 
-# VS Code
-.vscode/
-
-# Logs
-*.log
-
-# NuGet
-*.nupkg
-*.snupkg
+# Ignore NuGet packages folder
 packages/
-!packages/build/
-.nuget/
 
-# Test results
-TestResults/
-*.trx
-coverage/
-coverage-report/
+# Ignore .vs folder (Visual Studio)
+.vs/
 
-# DotCover / Coverlet
-*.dcvr
-coverage.cobertura.xml
+# Ignore .idea folder (Rider/IntelliJ)
+.idea/
 
-# ASP.NET
-appsettings.Development.json
-secrets.json
-
-# Environment
+# Ignore local environment files
 .env
-.env.*
+.env.local
+.env.*.local
 
-# EF Core
-*.db
+# Ignore logs and local databases
+*.log
 *.sqlite
-*.sqlite3
+*.db
 
-# Node (если есть фронт)
-node_modules/
-dist/
+# Ignore EF Core migrations folder (если миграции НЕ нужны в репозитории)
+Migrations/
 
-# Docker
+# Ignore dotnet tools manifest (если локальные инструменты не нужны)
+.dotnet/
+.tools/
+
+# Ignore Docker-related files (если они генерируются автоматически)
 docker-compose.override.yml
+.dockerignore
 
-# OS мусор
-.DS_Store
-Thumbs.db
+# Ignore publish output
+publish/
 
-# Publish
-*.Publish.xml
-*.pubxml
-
-# Resharper
-_ReSharper*/
-*.ReSharper
-*.DotSettings.user
-
-# Azure
-*.azurePubxml
-
-# Temporary
+# Ignore temporary files
+*~
 *.tmp
-*.temp
-*.cache
 
-# Generated files
-Generated/
+# Ignore JetBrains Rider files
+*.DotSettings.user
+*.DotSettings
+
+# Ignore Node.js dependencies if applicable
+node_modules/
+
+# Ignore Python virtual environments if applicable
+venv/
+ENV/
+env/
