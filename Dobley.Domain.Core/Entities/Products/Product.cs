@@ -23,7 +23,7 @@ public class Product
     }
 
     public static Product Create(string name, string description, string category, decimal unit, string unitType,
-        decimal price)
+        decimal price, string barcode)
     {
         return new Product()
         {
@@ -32,7 +32,49 @@ public class Product
             Category = category,
             Unit = unit,
             UnitType = unitType,
-            Price = price
+            Price = price,
+            Barcode = barcode
         };
+    }
+
+    public Product Update(string? name, string? description, string? category, decimal? unit, string? unitType,
+        decimal? price, string? barcode)
+    {
+        if (name != null)
+        {
+            Name = name;
+        }
+
+        if (description != null)
+        {
+            Description = description;
+        }
+
+        if (category != null)
+        {
+            Category = category;
+        }
+
+        if (unit != null)
+        {
+            Unit = unit.Value;
+        }
+
+        if (unitType != null)
+        {
+            UnitType = unitType;
+        }
+
+        if (price != null)
+        {
+            Price = price.Value;
+        }
+
+        if (barcode != null)
+        {
+            Barcode = barcode;
+        }
+
+        return this;
     }
 }

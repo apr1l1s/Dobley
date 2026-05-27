@@ -3,6 +3,7 @@ using Dobley.Data.Core.Repositories.Users;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
 using Dobley.Domain.Core.Repositories.Users;
+using Dobley.Domain.Core.UseCases;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,20 @@ public static class DependencyInjection
         services
             .AddDataBase()
             .AddRepositories()
+            .AddMediatr()
+            ;
+
+        return services;
+    }
+
+    public static IServiceCollection AddMediatr(this IServiceCollection services)
+    {
+        services
+            .AddMediatR(x => x.RegisterServicesFromAssemblies(
+                // typeof(IDomainEventNotificationHandler<>).Assembly,
+                typeof(IUseCaseDispatcher).Assembly))
+            // .AddScoped<IDomainEventDispatcher, DomainEventDispatcher>()
+            .AddScoped<IUseCaseDispatcher, UseCaseDispatcher>()
             ;
 
         return services;
@@ -35,14 +50,13 @@ public static class DependencyInjection
         services.AddDbContext<DobleyContext>(options =>
         {
             options.UseNpgsql(GetConnectionString(), npgsqlOptions =>
-                {
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorCodesToAdd: null
-                    );
-                })
-                .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            {
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorCodesToAdd: null
+                );
+            });
         });
 
         return services;

@@ -1,6 +1,9 @@
 using System.Text;
 using Dobley.Data.Core.Services;
+using Dobley.Domain.Core.Forms;
 using Dobley.Domain.Core.Repositories.Products;
+using Dobley.Domain.Core.UseCases;
+using Dobley.Domain.Core.UseCases.Products;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -29,7 +32,6 @@ services.AddAuthentication(options =>
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddCoreServices();
 
 var app = builder.Build();
@@ -41,9 +43,9 @@ app.MapGet("/health", () => Results.Ok());
 app.MapGet("/admin", () => Results.Ok()).RequireAuthorization();
 
 var productsApi = app.MapGroup("/products");
-productsApi.MapGet("/", async ([FromServices] IProductRepository products, [FromQuery] int pageIndex,
-            [FromQuery] int pageSize)
-        => await products.GetPaginatedCollection(new ProductFilter(), pageIndex, pageSize) is { } collection
+productsApi.MapGet("/", async ([FromQuery] int? pageIndex, [FromQuery] int? pageSize,
+            [FromServices] IUseCaseDispatcher dispatcher)
+        => await dispatcher.DispatchAsync(new GetProductsUseCase(pageIndex, pageSize)) is { } collection
             ? Results.Ok(collection)
             : Results.NotFound())
     .RequireAuthorization();
@@ -51,6 +53,18 @@ productsApi.MapGet("/", async ([FromServices] IProductRepository products, [From
 productsApi.MapGet("/{id}", async (int id, [FromServices] IProductRepository products)
         => await products.GetItemNullable(id) is { } product
             ? Results.Ok(product)
+            : Results.NotFound())
+    .RequireAuthorization();
+
+productsApi.MapPut("/{id}", async (int id, [FromBody] ProductForm form, [FromServices] IUseCaseDispatcher dispatcher)
+        => await dispatcher.DispatchAsync(new PutProductUseCase(id, form)) is { } product
+            ? Results.Accepted($"/products/{product.Id}", product)
+            : Results.NotFound())
+    .RequireAuthorization();
+
+productsApi.MapPost("/create", async ([FromBody] ProductForm form, [FromServices] IUseCaseDispatcher dispatcher)
+        => await dispatcher.DispatchAsync(new CreateProductUseCase(form)) is { } product
+            ? Results.Created($"/products/{product.Id}", product)
             : Results.NotFound())
     .RequireAuthorization();
 

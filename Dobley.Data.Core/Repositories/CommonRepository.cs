@@ -4,5 +4,5 @@ namespace Dobley.Data.Core.Repositories;
 
 public class CommonRepository(DobleyContext context) : ICommonRepository
 {
-    public Task SaveChangesAsync() => context.SaveChangesAsync();
+    public async Task SaveChangesAsync() => await context.SaveChangesAsync();
 }

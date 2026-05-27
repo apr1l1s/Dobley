@@ -23,11 +23,11 @@ public class DobleyContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
-            var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
-            var dbUser = Environment.GetEnvironmentVariable("DB_USER");
-            var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
-            var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+            var dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+            var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+            var dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "admin";
+            var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "admin";
+            var dbName = Environment.GetEnvironmentVariable("DB_NAME")  ?? "postgres";
 
             var connectionString =
                 $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword}";

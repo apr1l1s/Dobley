@@ -19,7 +19,9 @@ public class ProductRepository(DobleyContext context) : IProductRepository
 
     public Task<PaginatedCollection<Product>> GetPaginatedCollection(ProductFilter? filter = null, int pageIndex = 1,
         int pageSize = 10)
-        => ToPaginatedCollection(FilterEntities(filter),  pageIndex, pageSize);
+        => ToPaginatedCollection(FilterEntities(filter), pageIndex, pageSize);
+
+    public async Task<Product> AddAsync(Product product) => (await context.AddAsync(product)).Entity;
 
     private IQueryable<Product> FilterEntities(ProductFilter? filter)
     {
@@ -46,7 +48,8 @@ public class ProductRepository(DobleyContext context) : IProductRepository
     public async Task<PaginatedCollection<TEntity>> ToPaginatedCollection<TEntity>(IQueryable<TEntity> query,
         int pageIndex, int pageSize)
     {
-        var items = await query.Skip((pageIndex - 1) * pageSize) // Пропустить элементы предыдущих страниц
+        var items = await query
+            .Skip((pageIndex - 1) * pageSize) // Пропустить элементы предыдущих страниц
             .Take(pageSize) // Взять элементы текущей страницы
             .ToListAsync();
 
