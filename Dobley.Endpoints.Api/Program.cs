@@ -1,5 +1,4 @@
 using System.Text;
-using Dobley.Data.Core.Repositories;
 using Dobley.Data.Core.Services;
 using Dobley.Domain.Core.Repositories.Products;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,10 +7,6 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 var services = builder.Services;
-// services.ConfigureHttpJsonOptions(options =>
-// {
-//     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
-// });
 
 services.AddAuthentication(options =>
     {
@@ -35,8 +30,7 @@ services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddDataBase()
-    .AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddCoreServices();
 
 var app = builder.Build();
 
@@ -47,8 +41,8 @@ app.MapGet("/health", () => Results.Ok());
 app.MapGet("/admin", () => Results.Ok()).RequireAuthorization();
 
 var productsApi = app.MapGroup("/products");
-productsApi.MapGet("/", async ([FromServices] IProductRepository products, [FromQuery] int pageIndex = 1,
-            [FromQuery] int pageSize = 10)
+productsApi.MapGet("/", async ([FromServices] IProductRepository products, [FromQuery] int pageIndex,
+            [FromQuery] int pageSize)
         => await products.GetPaginatedCollection(new ProductFilter(), pageIndex, pageSize) is { } collection
             ? Results.Ok(collection)
             : Results.NotFound())

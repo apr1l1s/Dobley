@@ -10,5 +10,5 @@ public interface IRepository<TEntity, in TFilter>
 
     Task<IReadOnlyList<TEntity>?> GetCollectionAsync(TFilter filter);
 
-    Task<PaginatedCollection<TEntity>> GetPaginatedCollection(TFilter? filter, int pageNumber, int pageSize);
+    Task<PaginatedCollection<TEntity>> GetPaginatedCollection(TFilter? filter, int pageNumber = 1, int pageSize = 10);
 }

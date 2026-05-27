@@ -12,36 +12,39 @@ namespace Dobley.Data.Core.Repositories.Users;
 public class AuthService(IUserRepository userRepository, ICommonRepository commonRepository)
     : IAuthService
 {
-    private const int SALT_SIZE = 16; // Размер соли (в байтах)
-    private const int HASH_SIZE = 32; // Размер хэша (в байтах)
-    private const int ITERATIONS = 100_000; // Количество итераций
+    private const int SALT_SIZE = 16;
+    private const int HASH_SIZE = 32;
+    private const int ITERATIONS = 100_000;
     private const int TOKEN_LIFETIME_MINUTES = 360;
 
     public async Task<bool> Register(string login, string password)
     {
-        var hash = Hash(password);
-        var user = User.Create(login, hash);
-        await userRepository.AddAsync(user);
-        await commonRepository.SaveChangesAsync();
+        try
+        {
+            var hash = Hash(password);
+            var user = User.Create(login, hash);
+            await userRepository.AddAsync(user);
+            await commonRepository.SaveChangesAsync();
+        }
+        catch (Exception)
+        {
+            return false;
+        }
 
         return true;
     }
 
-    public async Task<string> Login(string login, string password)
+    public async Task<string?> Login(string login, string password)
     {
-        var user = await userRepository.GetByLogin(login);
-        if (user == null || !Verify(password, user.Password))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        return GenerateToken(user);
+        return await userRepository.GetByLogin(login) is { } user && Verify(password, user.Password)
+            ? GenerateToken(user)
+            : null;
     }
 
     private string GenerateToken(User user)
     {
-        var secretKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("SECRET_KEY")!));
+        var bytes = Environment.GetEnvironmentVariable("SECRET_KEY")!;
+        var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(bytes));
         var credentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
@@ -61,7 +64,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string Hash(string password)
+    private string Hash(string password)
     {
         byte[] salt = RandomNumberGenerator.GetBytes(SALT_SIZE);
         byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
@@ -75,7 +78,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
         return Convert.ToBase64String(salt) + "." + Convert.ToBase64String(hash);
     }
 
-    public bool Verify(string password, string hash)
+    private bool Verify(string password, string hash)
     {
         var parts = hash.Split('.');
         if (parts.Length != 2)
