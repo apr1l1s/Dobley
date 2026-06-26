@@ -1,4 +1,6 @@
-﻿using Dobley.Domain.Core.Entities.Products;
+﻿using Dobley.Domain.Core.Entities;
+using Dobley.Domain.Core.Entities.Products;
+using Dobley.Domain.Core.Entities.Storages;
 
 namespace Dobley.Domain.Core.Forms;
 
@@ -12,13 +14,17 @@ public class ProductForm
 
     public decimal? Price { get; set; }
 
-    public string? Category { get; set; }
+    public Category? Category { get; set; }
 
     public decimal? Unit { get; set; }
 
-    public string? UnitType { get; set; }
+    public UnitType? UnitType { get; set; }
 
     public string? Barcode { get; set; }
+
+    public int? StorageId { get; set; }
+
+    public Storage? DomainStorage { get; set; }
 
     public static ProductForm ToForm(Product product)
         => new()
@@ -31,21 +37,10 @@ public class ProductForm
             Unit = product.Unit,
             UnitType = product.UnitType,
             Barcode = product.Barcode,
+            StorageId = product.StorageId
         };
 
-    public Product? ToEntity()
-    {
-        if (Name.IsNullOrEmpty() ||
-            Description.IsNullOrEmpty() ||
-            Category.IsNullOrEmpty() ||
-            Unit == null ||
-            UnitType.IsNullOrEmpty() ||
-            Price == null ||
-            Barcode.IsNullOrEmpty())
-        {
-            return null;
-        }
-
-        return Product.Create(Name!, Description!, Category!, Unit.Value, UnitType!, Price.Value, Barcode);
-    }
+    public Product ToEntity()
+        => Product.Create(Name!, Description!, Category!.Value, Unit!.Value, UnitType!.Value, Price!.Value, Barcode!,
+            DomainStorage!);
 }
