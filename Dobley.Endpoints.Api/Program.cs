@@ -42,30 +42,26 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok());
 app.MapGet("/admin", () => Results.Ok()).RequireAuthorization();
 
-var productsApi = app.MapGroup("/products");
+var productsApi = app.MapGroup("/products").RequireAuthorization();
 productsApi.MapGet("/", async ([FromQuery] int? pageIndex, [FromQuery] int? pageSize,
-            [FromServices] IUseCaseDispatcher dispatcher)
-        => await dispatcher.DispatchAsync(new GetProductsUseCase(pageIndex, pageSize)) is { } collection
-            ? Results.Ok(collection)
-            : Results.NotFound())
-    .RequireAuthorization();
+        [FromServices] IUseCaseDispatcher dispatcher)
+    => await dispatcher.DispatchAsync(new GetProductsUseCase(pageIndex, pageSize)) is { } collection
+        ? Results.Ok(collection)
+        : Results.NotFound());
 
 productsApi.MapGet("/{id}", async (int id, [FromServices] IProductRepository products)
-        => await products.GetItemNullable(id) is { } product
-            ? Results.Ok(product)
-            : Results.NotFound())
-    .RequireAuthorization();
+    => await products.GetItemNullable(id) is { } product
+        ? Results.Ok(product)
+        : Results.NotFound());
 
 productsApi.MapPut("/{id}", async (int id, [FromBody] ProductForm form, [FromServices] IUseCaseDispatcher dispatcher)
-        => await dispatcher.DispatchAsync(new PutProductUseCase(id, form)) is { } product
-            ? Results.Accepted($"/products/{product.Id}", product)
-            : Results.NotFound())
-    .RequireAuthorization();
+    => await dispatcher.DispatchAsync(new PutProductUseCase(id, form)) is { } product
+        ? Results.Accepted($"/products/{product.Id}", product)
+        : Results.NotFound());
 
 productsApi.MapPost("/create", async ([FromBody] ProductForm form, [FromServices] IUseCaseDispatcher dispatcher)
-        => await dispatcher.DispatchAsync(new CreateProductUseCase(form)) is { } product
-            ? Results.Created($"/products/{product.Id}", product)
-            : Results.NotFound())
-    .RequireAuthorization();
+    => await dispatcher.DispatchAsync(new CreateProductUseCase(form)) is { } product
+        ? Results.Created($"/products/{product.Id}", product)
+        : Results.NotFound());
 
 app.Run();
