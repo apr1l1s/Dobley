@@ -9,8 +9,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateSlimBuilder(args);
-var services = builder.Services;
 
+var isLocal = builder.Configuration.GetValue<bool>("ASPNET_LOCAL");
+
+builder.Host.ConfigureAppServices(isLocal);
+
+var services = builder.Services;
 services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

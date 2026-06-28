@@ -3,8 +3,12 @@ using Dobley.Domain.Core.Repositories.Users;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateSlimBuilder(args);
-var services = builder.Services;
 
+var isLocal = builder.Configuration.GetValue<bool>("ASPNET_LOCAL");
+
+builder.Host.ConfigureAppServices(isLocal);
+
+var services = builder.Services;
 services.AddAuthServices();
 
 var app = builder.Build();

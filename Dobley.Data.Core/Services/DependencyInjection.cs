@@ -12,11 +12,37 @@ using Dobley.Domain.Core.UseCases;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Dobley.Data.Core.Services;
 
 public static class DependencyInjection
 {
+    public static IHostBuilder ConfigureAppServices(this IHostBuilder builder, bool isLocal)
+    {
+        return builder.ConfigureAppConfiguration((hostingContext, config) =>
+        {
+            var appPath = string.Empty;
+            var basePath = string.Empty;
+
+            var environment = hostingContext.HostingEnvironment;
+            if (environment.IsDevelopment() || isLocal)
+            {
+                appPath = environment.ContentRootPath;
+                basePath = Path.Combine(environment.ContentRootPath, "..",
+                    typeof(DependencyInjection).Assembly.GetName().Name ?? string.Empty);
+            }
+
+            config
+                .AddJsonFile(Path.Combine(basePath, "settings.json"), optional: true, reloadOnChange: true)
+                .AddJsonFile(Path.Combine(basePath, $"settings.{environment.EnvironmentName}.json"), optional: true,
+                    reloadOnChange: true)
+                .AddJsonFile(Path.Combine(appPath, $"appsettings.{environment.EnvironmentName}.json"),
+                    optional: true, reloadOnChange: true)
+                ;
+        });
+    }
+
     public static TSection? GetTypedSectionNullable<TSection>(this IConfiguration configuration)
         where TSection : class, new()
     {
