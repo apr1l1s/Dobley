@@ -1,5 +1,5 @@
 using System.Text;
-using Dobley.Data.Core.Services;
+using Dobley.Data.Core;
 using Dobley.Domain.Core.Forms;
 using Dobley.Domain.Core.Repositories.Products;
 using Dobley.Domain.Core.UseCases;

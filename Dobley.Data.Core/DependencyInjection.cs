@@ -14,7 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Dobley.Data.Core.Services;
+namespace Dobley.Data.Core;
 
 public static class DependencyInjection
 {
