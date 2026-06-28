@@ -1,16 +1,56 @@
-﻿using Dobley.Data.Core.Repositories;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using System.Text.Unicode;
+using Dobley.Data.Core.Repositories;
 using Dobley.Data.Core.Repositories.Users;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
 using Dobley.Domain.Core.Repositories.Users;
 using Dobley.Domain.Core.UseCases;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Dobley.Data.Core.Services;
 
 public static class DependencyInjection
 {
+    public static TSection? GetTypedSectionNullable<TSection>(this IConfiguration configuration)
+        where TSection : class, new()
+    {
+        return configuration.GetSection(typeof(TSection).Name)
+            .Get<TSection>(x => x.BindNonPublicProperties = true);
+    }
+
+    public static TSection GetTypedSection<TSection>(this IConfiguration configuration)
+        where TSection : class, new()
+    {
+        return configuration.GetTypedSectionNullable<TSection>() ?? new TSection();
+    }
+    
+    public static JsonSerializerOptions GetDefaultJsonOptions()
+    {
+        var jsonOptions = new JsonSerializerOptions
+        {
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+            // DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            PropertyNameCaseInsensitive = true
+        };
+
+        AddDefaultJsonConverters(jsonOptions);
+
+        return jsonOptions;
+    }
+
+    public static void AddDefaultJsonConverters(this JsonSerializerOptions jsonOptions)
+    {
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
+    }
+
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         services
