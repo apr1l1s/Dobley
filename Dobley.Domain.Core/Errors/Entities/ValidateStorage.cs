@@ -1,3 +1,4 @@
-﻿namespace Dobley.Domain.Core.Errors.Entities;
+namespace Dobley.Domain.Core.Errors.Entities;
 
-public class DomainValidateStorageException(string message) : Exception(message);
+public class DomainValidateStorageException(string message)
+    : DomainValidateException(message);

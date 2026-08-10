@@ -2,7 +2,11 @@
 
 public interface IAuthService
 {
-    Task<string?> Login(string login, string password);
+    Task<AuthTokenPair?> Login(string login, string password, CancellationToken cancellationToken = default);
 
-    Task<bool> Register(string login, string password);
+    Task<AuthTokenPair?> Refresh(string refreshToken, CancellationToken cancellationToken = default);
+
+    Task Logout(string refreshToken, CancellationToken cancellationToken = default);
+
+    Task<bool> Register(string login, string password, CancellationToken cancellationToken = default);
 }

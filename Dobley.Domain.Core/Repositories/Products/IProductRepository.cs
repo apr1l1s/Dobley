@@ -2,4 +2,7 @@
 
 namespace Dobley.Domain.Core.Repositories.Products;
 
-public interface IProductRepository : IRepository<Product, ProductFilter>;
+public interface IProductRepository : IRepository<Product, ProductFilter>
+{
+    Task<Product?> GetOwnedProductAsync(int id, string userName, CancellationToken cancellationToken = default);
+}

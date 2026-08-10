@@ -6,6 +6,8 @@ public class ProductFilter(params int[] ids)
 
     public IReadOnlyList<int>? Ids { get; set; } = ids;
 
+    public IReadOnlyList<string>? UserNames { get; set; }
+
     public ProductFilter SetNames(IReadOnlyList<string> names)
     {
         Names = names;
@@ -16,6 +18,13 @@ public class ProductFilter(params int[] ids)
     public ProductFilter SetIds(IReadOnlyList<int> ids)
     {
         Ids = ids;
+
+        return this;
+    }
+
+    public ProductFilter SetUserNames(IReadOnlyList<string> userNames)
+    {
+        UserNames = userNames;
 
         return this;
     }

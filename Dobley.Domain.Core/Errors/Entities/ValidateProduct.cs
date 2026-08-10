@@ -1,3 +1,4 @@
-﻿namespace Dobley.Domain.Core.Errors.Entities;
+namespace Dobley.Domain.Core.Errors.Entities;
 
-public class DomainValidateProductException(string message) : Exception(message);
+public class DomainValidateProductException(string message)
+    : DomainValidateException(message);

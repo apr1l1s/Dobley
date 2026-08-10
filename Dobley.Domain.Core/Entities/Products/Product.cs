@@ -4,6 +4,7 @@ using Dobley.Domain.Core.Errors.Entities;
 namespace Dobley.Domain.Core.Entities.Products;
 
 public class Product
+    : IAuditableEntity, ISoftDeletedEntity
 {
     public int Id { get; set; }
 
@@ -24,6 +25,14 @@ public class Product
     public int StorageId { get; set; }
 
     public Storage? DomainStorage { get; set; }
+
+    public DateTime DateAdded { get; private set; }
+
+    public DateTime DateUpdated { get; private set; }
+
+    public DateTime? DateDeleted { get; private set; }
+
+    public bool IsDeleted => DateDeleted.HasValue;
 
     private Product()
     {
@@ -146,4 +155,10 @@ public class Product
 
         return this;
     }
+
+    public void SetDateAdded(DateTime dateAdded) => DateAdded = dateAdded;
+
+    public void SetDateUpdated(DateTime dateUpdated) => DateUpdated = dateUpdated;
+
+    public void Delete(DateTime dateDeleted) => DateDeleted = dateDeleted;
 }

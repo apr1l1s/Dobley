@@ -1,4 +1,3 @@
-using Dobley.Domain.Core;
 using Dobley.Domain.Core.Entities.Products;
 using Dobley.Domain.Core.Entities.Storages;
 using Dobley.Domain.Core.Errors.Entities;
@@ -52,7 +51,8 @@ public class ProductForm
             || Barcode.IsNullOrEmpty()
             || StorageId is null)
         {
-            throw new DomainValidateProductException("Не все обязательные поля продукта заполнены");
+            throw new DomainValidateProductException(
+                "Не все обязательные поля продукта заполнены");
         }
 
         var name = Name!;

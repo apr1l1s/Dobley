@@ -4,7 +4,7 @@ namespace Dobley.Domain.Core.Repositories.Users;
 
 public interface IUserRepository
 {
-    Task<User?> GetByLogin(string login);
+    Task<User?> GetByLogin(string login, CancellationToken cancellationToken = default);
 
-    Task AddAsync(User user);
+    Task AddAsync(User user, CancellationToken cancellationToken = default);
 }

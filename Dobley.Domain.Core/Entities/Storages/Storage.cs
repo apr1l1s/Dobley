@@ -4,6 +4,7 @@ using Dobley.Domain.Core.Errors.Entities;
 namespace Dobley.Domain.Core.Entities.Storages;
 
 public class Storage
+    : IAuditableEntity, ISoftDeletedEntity
 {
     public int Id { get; set; }
 
@@ -14,6 +15,14 @@ public class Storage
     public string Description { get; set; } = null!;
 
     public User? DomainUser { get; set; }
+
+    public DateTime DateAdded { get; private set; }
+
+    public DateTime DateUpdated { get; private set; }
+
+    public DateTime? DateDeleted { get; private set; }
+
+    public bool IsDeleted => DateDeleted.HasValue;
 
     private Storage()
     {
@@ -54,22 +63,30 @@ public class Storage
 
     public Storage Update(string? name, string? description, User? user)
     {
+        var updatedStorage = Create(name ?? Name, description ?? Description, user?.Login ?? UserName);
+
         if (name != null)
         {
-            Name = name;
+            Name = updatedStorage.Name;
         }
 
         if (description != null)
         {
-            Description = description;
+            Description = updatedStorage.Description;
         }
 
         if (user != null)
         {
-            UserName = user.Login;
+            UserName = updatedStorage.UserName;
             DomainUser = user;
         }
 
         return this;
     }
+
+    public void SetDateAdded(DateTime dateAdded) => DateAdded = dateAdded;
+
+    public void SetDateUpdated(DateTime dateUpdated) => DateUpdated = dateUpdated;
+
+    public void Delete(DateTime dateDeleted) => DateDeleted = dateDeleted;
 }

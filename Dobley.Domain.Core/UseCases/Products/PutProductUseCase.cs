@@ -1,29 +1,28 @@
-﻿using Dobley.Domain.Core.Entities.Products;
+using Dobley.Domain.Core.Entities.Products;
 using Dobley.Domain.Core.Forms;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
 
 namespace Dobley.Domain.Core.UseCases.Products;
 
-public record PutProductUseCase(int Id, ProductForm Form) : IUseCase<Product?>;
+public record PutProductUseCase(int Id, ProductForm Form, string UserName)
+    : IUseCase<Product?>;
 
-public record PutProductUseCaseHandler(IProductRepository ProductRepository,
-    ICommonRepository CommonRepository)
+public record PutProductUseCaseHandler(IProductRepository ProductRepository, ICommonRepository CommonRepository)
     : IUseCaseHandler<PutProductUseCase, Product?>
 {
     public async Task<Product?> Handle(PutProductUseCase request, CancellationToken cancellationToken)
     {
-        var (id, form) = request;
-        var product = await ProductRepository.GetItemNullable(id);
+        var product = await ProductRepository.GetOwnedProductAsync(request.Id, request.UserName, cancellationToken);
         if (product is null)
         {
             return null;
         }
 
-        product = product.Update(form.Name, form.Description, form.Category, form.Unit, form.UnitType, form.Price,
-            form.Barcode);
+        product = product.Update(request.Form.Name, request.Form.Description, request.Form.Category, request.Form.Unit,
+            request.Form.UnitType, request.Form.Price, request.Form.Barcode);
 
-        await CommonRepository.SaveChangesAsync();
+        await CommonRepository.SaveChangesAsync(cancellationToken);
         return product;
     }
 }

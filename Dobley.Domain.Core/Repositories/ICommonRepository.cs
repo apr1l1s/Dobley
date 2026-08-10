@@ -2,5 +2,11 @@
 
 public interface ICommonRepository
 {
-    public Task SaveChangesAsync();
+    void FreeContext();
+
+    void FreeContext(object entity);
+
+    void FreeContext(IEnumerable<object> exceptEntities);
+
+    Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
