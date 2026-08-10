@@ -1,63 +1,195 @@
-﻿services:
-  dobley.endpoints.api:
+services:
+  dobley.gateway:
+    image: dobley.endpoints.gateway
+    container_name: dobley.gateway
+    build:
+      context: .
+      dockerfile: Dobley.Endpoints.Gateway/Dockerfile
+    environment:
+      ASPNETCORE_HTTP_PORTS: 5000
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://dobley.otel-collector:4317}
+      LOG_FILE_PATH: /app/logs/gateway.log
+      DATA_PROTECTION_KEYS_PATH: /app/data-protection-keys
+    networks:
+      - dobley-network
+    volumes:
+      - dobley_gateway_logs:/app/logs
+      - dobley_gateway_data_protection_keys:/app/data-protection-keys
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-5000}:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    depends_on:
+      dobley.api:
+        condition: service_healthy
+      dobley.auth:
+        condition: service_healthy
+    restart: always
+
+  dobley.api:
     image: dobley.endpoints.api
-    container_name: dobley.endpoints.api
+    container_name: dobley.api
     build:
       context: .
       dockerfile: Dobley.Endpoints.Api/Dockerfile
     environment:
-      DB_HOST: postgres
+      DB_HOST: dobley.postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-admin}
       DB_NAME: postgres
       SECRET_KEY: ${SECRET_KEY:-ThisIsAVeryLongSecretKeyThatIsAtLeast32BytesLong}
-      ASPNETCORE_URLS: "http://0.0.0.0:${API_PORT:-5001}"
+      JWT_ISSUER: ${JWT_ISSUER:-apr1l1s_auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-apr1l1s_services}
+      SEED_DEV_DATA: ${SEED_DEV_DATA:-false}
+      REDIS_CONNECTION: ${REDIS_CONNECTION:-dobley.redis:6379}
+      ASPNETCORE_HTTP_PORTS: 5001
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://dobley.otel-collector:4317}
+      LOG_FILE_PATH: /app/logs/api.log
+      DATA_PROTECTION_KEYS_PATH: /app/data-protection-keys
     networks:
       - dobley-network
-    ports:
-      - "${API_PORT:-5001}:${API_PORT:-5001}"
+    volumes:
+      - dobley_api_logs:/app/logs
+      - dobley_api_data_protection_keys:/app/data-protection-keys
     depends_on:
-      dobley.endpoints.auth:
-        condition: service_started
-      dobley.databases.base:
+      dobley.postgres:
         condition: service_healthy
+      dobley.redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: always
 
-  dobley.endpoints.auth:
+  dobley.auth:
     image: dobley.endpoints.auth
-    container_name: dobley.endpoints.auth
+    container_name: dobley.auth
     build:
       context: .
       dockerfile: Dobley.Endpoints.Auth/Dockerfile
     environment:
-      DB_HOST: postgres
+      DB_HOST: dobley.postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-admin}
       DB_NAME: postgres
       SECRET_KEY: ${SECRET_KEY:-ThisIsAVeryLongSecretKeyThatIsAtLeast32BytesLong}
-      ASPNETCORE_URLS: "http://0.0.0.0:${AUTH_PORT:-5002}"
+      JWT_ISSUER: ${JWT_ISSUER:-apr1l1s_auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-apr1l1s_services}
+      SEED_DEV_DATA: ${SEED_DEV_DATA:-false}
+      REDIS_CONNECTION: ${REDIS_CONNECTION:-dobley.redis:6379}
+      ASPNETCORE_HTTP_PORTS: 5002
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://dobley.otel-collector:4317}
+      LOG_FILE_PATH: /app/logs/auth.log
+      DATA_PROTECTION_KEYS_PATH: /app/data-protection-keys
+    networks:
+      - dobley-network
+    volumes:
+      - dobley_auth_logs:/app/logs
+      - dobley_auth_data_protection_keys:/app/data-protection-keys
+    depends_on:
+      dobley.postgres:
+        condition: service_healthy
+      dobley.redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: always
+
+  dobley.redis:
+    image: redis:7-alpine
+    container_name: dobley.redis
     networks:
       - dobley-network
     ports:
-      - "${AUTH_PORT:-5002}:${AUTH_PORT:-5002}"
-    depends_on:
-      dobley.databases.base:
-        condition: service_healthy
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
-  dobley.databases.base:
-    image: postgres:latest
-    container_name: postgres
+  dobley.elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: dobley.elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    networks:
+      - dobley-network
+    ports:
+      - "127.0.0.1:${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - dobley_elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: always
+
+  dobley.otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.113.0
+    container_name: dobley.otel-collector
+    command: ["--config=/etc/otel-collector.yaml"]
+    networks:
+      - dobley-network
+    ports:
+      - "127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317"
+      - "127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318"
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    depends_on:
+      dobley.elasticsearch:
+        condition: service_healthy
+    restart: always
+
+  dobley.grafana:
+    image: grafana/grafana:11.3.0
+    container_name: dobley.grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_DEFAULT_LANGUAGE: ru-RU
+    networks:
+      - dobley-network
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - dobley_grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      dobley.elasticsearch:
+        condition: service_healthy
+    restart: always
+
+  dobley.postgres:
+    image: postgres:17-alpine
+    container_name: dobley.postgres
     environment:
       POSTGRES_USER: ${DB_USER:-admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
       POSTGRES_DB: postgres
     volumes:
-      - dobley_databases_volume:/var/lib/postgresql/data
+      - dobley_postgres_data:/var/lib/postgresql/data
     networks:
       - dobley-network
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d postgres"]
       interval: 10s
@@ -70,6 +202,30 @@ networks:
     driver: bridge
 
 volumes:
-  dobley_databases_volume:
-    name: dobley_databases_volume
+  dobley_postgres_data:
+    name: dobley_postgres_data
+    driver: local
+  dobley_elasticsearch_data:
+    name: dobley_elasticsearch_data
+    driver: local
+  dobley_grafana_data:
+    name: dobley_grafana_data
+    driver: local
+  dobley_gateway_logs:
+    name: dobley_gateway_logs
+    driver: local
+  dobley_api_logs:
+    name: dobley_api_logs
+    driver: local
+  dobley_auth_logs:
+    name: dobley_auth_logs
+    driver: local
+  dobley_gateway_data_protection_keys:
+    name: dobley_gateway_data_protection_keys
+    driver: local
+  dobley_api_data_protection_keys:
+    name: dobley_api_data_protection_keys
+    driver: local
+  dobley_auth_data_protection_keys:
+    name: dobley_auth_data_protection_keys
     driver: local
