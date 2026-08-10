@@ -52,7 +52,7 @@ public class Product
             throw new DomainValidateProductException("Описание продукта должно быть не пустым и меньше 200 символов");
         }
 
-        if (category.IsNullOrEmpty() || Enum.TryParse(category, true, out Category parsedCategory))
+        if (category.IsNullOrEmpty() || !Enum.TryParse(category, true, out Category parsedCategory))
         {
             throw new DomainValidateProductException("Неизвестная категория");
         }
@@ -62,7 +62,7 @@ public class Product
             throw new DomainValidateProductException("Количество продукта не может быть отрицательным");
         }
 
-        if (unitType.IsNullOrEmpty() || Enum.TryParse(unitType, true, out UnitType parsedUnitType))
+        if (unitType.IsNullOrEmpty() || !Enum.TryParse(unitType, true, out UnitType parsedUnitType))
         {
             throw new DomainValidateProductException("Неизвестный тип измерения");
         }
@@ -98,39 +98,50 @@ public class Product
     public Product Update(string? name, string? description, Category? category, decimal? unit, UnitType? unitType,
         decimal? price, string? barcode)
     {
+        var updatedProduct = Create(
+            name ?? Name,
+            description ?? Description,
+            (category ?? Category).ToString(),
+            unit ?? Unit,
+            (unitType ?? UnitType).ToString(),
+            price ?? Price,
+            barcode ?? Barcode,
+            StorageId
+        );
+
         if (name != null)
         {
-            Name = name;
+            Name = updatedProduct.Name;
         }
 
         if (description != null)
         {
-            Description = description;
+            Description = updatedProduct.Description;
         }
 
         if (category != null)
         {
-            Category = category.Value;
+            Category = updatedProduct.Category;
         }
 
         if (unit != null)
         {
-            Unit = unit.Value;
+            Unit = updatedProduct.Unit;
         }
 
         if (unitType != null)
         {
-            UnitType = unitType.Value;
+            UnitType = updatedProduct.UnitType;
         }
 
         if (price != null)
         {
-            Price = price.Value;
+            Price = updatedProduct.Price;
         }
 
         if (barcode != null)
         {
-            Barcode = barcode;
+            Barcode = updatedProduct.Barcode;
         }
 
         return this;

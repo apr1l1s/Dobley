@@ -1,6 +1,7 @@
-﻿using Dobley.Domain.Core.Entities;
+using Dobley.Domain.Core;
 using Dobley.Domain.Core.Entities.Products;
 using Dobley.Domain.Core.Entities.Storages;
+using Dobley.Domain.Core.Errors.Entities;
 
 namespace Dobley.Domain.Core.Forms;
 
@@ -41,6 +42,29 @@ public class ProductForm
         };
 
     public Product ToEntity()
-        => Product.Create(Name!, Description!, Category!.Value, Unit!.Value, UnitType!.Value, Price!.Value, Barcode!,
-            DomainStorage!);
+    {
+        if (Name.IsNullOrEmpty()
+            || Description.IsNullOrEmpty()
+            || Category is null
+            || Unit is null
+            || UnitType is null
+            || Price is null
+            || Barcode.IsNullOrEmpty()
+            || StorageId is null)
+        {
+            throw new DomainValidateProductException("Не все обязательные поля продукта заполнены");
+        }
+
+        var name = Name!;
+        var description = Description!;
+        var category = Category.Value;
+        var unit = Unit.Value;
+        var unitType = UnitType.Value;
+        var price = Price.Value;
+        var barcode = Barcode!;
+        var storageId = StorageId.Value;
+
+        return Product.Create(name, description, category.ToString(), unit, unitType.ToString(), price, barcode,
+            storageId);
+    }
 }

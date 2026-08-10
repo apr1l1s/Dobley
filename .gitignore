@@ -30,9 +30,6 @@ packages/
 *.sqlite
 *.db
 
-# Ignore EF Core migrations folder (если миграции НЕ нужны в репозитории)
-Migrations/
-
 # Ignore dotnet tools manifest (если локальные инструменты не нужны)
 .dotnet/
 .tools/

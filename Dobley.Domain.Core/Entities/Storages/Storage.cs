@@ -7,7 +7,7 @@ public class Storage
 {
     public int Id { get; set; }
 
-    public string UserName { get; set; }
+    public string UserName { get; set; } = null!;
 
     public string Name { get; set; } = null!;
 
@@ -18,7 +18,6 @@ public class Storage
     private Storage()
     {
     }
-
 
     public static Storage Create(string name, string description, User user)
     {
@@ -35,14 +34,14 @@ public class Storage
             throw new DomainValidateStorageException("Название хранилища должно быть не пустым и меньше 100 символов");
         }
 
-        if (name.IsNullOrEmpty() || name.Length > 200)
+        if (description.IsNullOrEmpty() || description.Length > 200)
         {
             throw new DomainValidateStorageException("Описание хранилища должно быть не пустым и меньше 200 символов");
         }
 
         if (userName.IsNullOrEmpty() || userName.Length > 100)
         {
-            throw new DomainValidateProductException("Логин владельца должен быть не пустой или меньше 100 символов");
+            throw new DomainValidateStorageException("Логин владельца должен быть не пустой или меньше 100 символов");
         }
 
         return new Storage

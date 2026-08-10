@@ -5,6 +5,7 @@ using System.Text;
 using Dobley.Domain.Core.Entities.Users;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Users;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Dobley.Data.Core.Repositories.Users;
@@ -19,6 +20,11 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
 
     public async Task<bool> Register(string login, string password)
     {
+        if (await userRepository.GetByLogin(login) is not null)
+        {
+            return false;
+        }
+
         try
         {
             var hash = Hash(password);
@@ -26,7 +32,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
             await userRepository.AddAsync(user);
             await commonRepository.SaveChangesAsync();
         }
-        catch (Exception)
+        catch (DbUpdateException)
         {
             return false;
         }
@@ -43,7 +49,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
 
     private string GenerateToken(User user)
     {
-        var bytes = Environment.GetEnvironmentVariable("SECRET_KEY")!;
+        var bytes = DependencyInjection.GetRequiredSecretKey();
         var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(bytes));
         var credentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
 
@@ -54,8 +60,8 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
         };
 
         var token = new JwtSecurityToken(
-            issuer: "your-auth-service",
-            audience: "your-audience",
+            issuer: "apr1l1s_auth",
+            audience: "apr1l1s_services",
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(TOKEN_LIFETIME_MINUTES),
             signingCredentials: credentials
@@ -67,13 +73,7 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
     private string Hash(string password)
     {
         byte[] salt = RandomNumberGenerator.GetBytes(SALT_SIZE);
-        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
-            password,
-            salt,
-            ITERATIONS,
-            HashAlgorithmName.SHA256,
-            HASH_SIZE
-        );
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, ITERATIONS, HashAlgorithmName.SHA256, HASH_SIZE);
 
         return Convert.ToBase64String(salt) + "." + Convert.ToBase64String(hash);
     }
@@ -88,13 +88,8 @@ public class AuthService(IUserRepository userRepository, ICommonRepository commo
 
         byte[] salt = Convert.FromBase64String(parts[0]);
         byte[] expectedHash = Convert.FromBase64String(parts[1]);
-        byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(
-            password,
-            salt,
-            ITERATIONS,
-            HashAlgorithmName.SHA256,
-            expectedHash.Length
-        );
+        byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, ITERATIONS, HashAlgorithmName.SHA256,
+            expectedHash.Length);
 
         return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
     }

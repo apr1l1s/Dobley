@@ -1,9 +1,11 @@
-﻿using System.Text.Encodings.Web;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.Unicode;
 using Dobley.Data.Core.Repositories;
+using Dobley.Data.Core.Repositories.Products;
 using Dobley.Data.Core.Repositories.Users;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
@@ -38,8 +40,7 @@ public static class DependencyInjection
                 .AddJsonFile(Path.Combine(basePath, $"settings.{environment.EnvironmentName}.json"), optional: true,
                     reloadOnChange: true)
                 .AddJsonFile(Path.Combine(appPath, $"appsettings.{environment.EnvironmentName}.json"),
-                    optional: true, reloadOnChange: true)
-                ;
+                    optional: true, reloadOnChange: true);
         });
     }
 
@@ -55,7 +56,7 @@ public static class DependencyInjection
     {
         return configuration.GetTypedSectionNullable<TSection>() ?? new TSection();
     }
-    
+
     public static JsonSerializerOptions GetDefaultJsonOptions()
     {
         var jsonOptions = new JsonSerializerOptions
@@ -63,7 +64,6 @@ public static class DependencyInjection
             Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-            // DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             PropertyNameCaseInsensitive = true
         };
 
@@ -81,8 +81,7 @@ public static class DependencyInjection
     {
         services
             .AddCoreServices()
-            .AddScoped<IAuthService, AuthService>()
-            ;
+            .AddScoped<IAuthService, AuthService>();
 
         return services;
     }
@@ -92,8 +91,7 @@ public static class DependencyInjection
         services
             .AddDataBase()
             .AddRepositories()
-            .AddMediatr()
-            ;
+            .AddMediatr();
 
         return services;
     }
@@ -101,12 +99,8 @@ public static class DependencyInjection
     public static IServiceCollection AddMediatr(this IServiceCollection services)
     {
         services
-            .AddMediatR(x => x.RegisterServicesFromAssemblies(
-                // typeof(IDomainEventNotificationHandler<>).Assembly,
-                typeof(IUseCaseDispatcher).Assembly))
-            // .AddScoped<IDomainEventDispatcher, DomainEventDispatcher>()
-            .AddScoped<IUseCaseDispatcher, UseCaseDispatcher>()
-            ;
+            .AddMediatR(x => x.RegisterServicesFromAssemblies(typeof(IUseCaseDispatcher).Assembly))
+            .AddScoped<IUseCaseDispatcher, UseCaseDispatcher>();
 
         return services;
     }
@@ -133,19 +127,33 @@ public static class DependencyInjection
         services
             .AddScoped<ICommonRepository, CommonRepository>()
             .AddScoped<IProductRepository, ProductRepository>()
-            .AddScoped<IUserRepository, UserRepository>()
-            ;
+            .AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }
 
+    public static string GetRequiredEnvironmentVariable(string name)
+        => Environment.GetEnvironmentVariable(name)
+           ?? throw new InvalidOperationException($"Environment variable '{name}' is required.");
+
+    public static string GetRequiredSecretKey()
+    {
+        var secretKey = GetRequiredEnvironmentVariable("SECRET_KEY");
+        if (Encoding.UTF8.GetByteCount(secretKey) < 32)
+        {
+            throw new InvalidOperationException("Environment variable 'SECRET_KEY' must contain at least 32 bytes.");
+        }
+
+        return secretKey;
+    }
+
     private static string GetConnectionString()
     {
-        var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
-        var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
-        var dbUser = Environment.GetEnvironmentVariable("DB_USER");
-        var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
-        var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+        var dbHost = GetRequiredEnvironmentVariable("DB_HOST");
+        var dbPort = GetRequiredEnvironmentVariable("DB_PORT");
+        var dbUser = GetRequiredEnvironmentVariable("DB_USER");
+        var dbPassword = GetRequiredEnvironmentVariable("DB_PASSWORD");
+        var dbName = GetRequiredEnvironmentVariable("DB_NAME");
 
         return $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword}";
     }

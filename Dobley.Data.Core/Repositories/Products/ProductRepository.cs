@@ -3,7 +3,7 @@ using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dobley.Data.Core.Repositories;
+namespace Dobley.Data.Core.Repositories.Products;
 
 public class ProductRepository(DobleyContext context) : IProductRepository
 {
@@ -48,11 +48,22 @@ public class ProductRepository(DobleyContext context) : IProductRepository
     public async Task<PaginatedCollection<TEntity>> ToPaginatedCollection<TEntity>(IQueryable<TEntity> query,
         int pageIndex, int pageSize)
     {
+        if (pageIndex < 1)
+        {
+            pageIndex = 1;
+        }
+
+        if (pageSize is < 1 or > 100)
+        {
+            pageSize = 10;
+        }
+
+        var totalCount = await query.CountAsync();
         var items = await query
             .Skip((pageIndex - 1) * pageSize) // Пропустить элементы предыдущих страниц
             .Take(pageSize) // Взять элементы текущей страницы
             .ToListAsync();
 
-        return new PaginatedCollection<TEntity>(items, pageIndex, pageSize);
+        return new PaginatedCollection<TEntity>(items, pageIndex, pageSize, totalCount);
     }
 }
