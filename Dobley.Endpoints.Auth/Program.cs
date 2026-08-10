@@ -2,7 +2,6 @@ using Dobley.Data.Core;
 using Dobley.Data.Core.Context;
 using Dobley.Endpoints.Auth.Dto;
 using Dobley.Domain.Core.Repositories.Users;
-using Dobley.Endpoints.Observability;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 

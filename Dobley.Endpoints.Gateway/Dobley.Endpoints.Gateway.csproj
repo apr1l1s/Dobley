@@ -16,11 +16,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.16" />
       <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Dobley.Endpoints.Observability\Dobley.Endpoints.Observability.csproj" />
+      <ProjectReference Include="..\Dobley.Data.Core\Dobley.Data.Core.csproj" />
     </ItemGroup>
 
 </Project>

@@ -13,7 +13,6 @@ WORKDIR /src
 COPY ["Dobley.Endpoints.Auth/Dobley.Endpoints.Auth.csproj", "Dobley.Endpoints.Auth/"]
 COPY ["Dobley.Data.Core/Dobley.Data.Core.csproj", "Dobley.Data.Core/"]
 COPY ["Dobley.Domain.Core/Dobley.Domain.Core.csproj", "Dobley.Domain.Core/"]
-COPY ["Dobley.Endpoints.Observability/Dobley.Endpoints.Observability.csproj", "Dobley.Endpoints.Observability/"]
 RUN dotnet restore "Dobley.Endpoints.Auth/Dobley.Endpoints.Auth.csproj"
 COPY . .
 WORKDIR "/src/Dobley.Endpoints.Auth"

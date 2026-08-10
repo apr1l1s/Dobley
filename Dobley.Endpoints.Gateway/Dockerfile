@@ -11,7 +11,8 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Dobley.Endpoints.Gateway/Dobley.Endpoints.Gateway.csproj", "Dobley.Endpoints.Gateway/"]
-COPY ["Dobley.Endpoints.Observability/Dobley.Endpoints.Observability.csproj", "Dobley.Endpoints.Observability/"]
+COPY ["Dobley.Data.Core/Dobley.Data.Core.csproj", "Dobley.Data.Core/"]
+COPY ["Dobley.Domain.Core/Dobley.Domain.Core.csproj", "Dobley.Domain.Core/"]
 RUN dotnet restore "Dobley.Endpoints.Gateway/Dobley.Endpoints.Gateway.csproj"
 COPY . .
 WORKDIR "/src/Dobley.Endpoints.Gateway"

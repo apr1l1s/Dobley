@@ -13,7 +13,6 @@ WORKDIR /src
 COPY ["Dobley.Endpoints.Api/Dobley.Endpoints.Api.csproj", "Dobley.Endpoints.Api/"]
 COPY ["Dobley.Data.Core/Dobley.Data.Core.csproj", "Dobley.Data.Core/"]
 COPY ["Dobley.Domain.Core/Dobley.Domain.Core.csproj", "Dobley.Domain.Core/"]
-COPY ["Dobley.Endpoints.Observability/Dobley.Endpoints.Observability.csproj", "Dobley.Endpoints.Observability/"]
 RUN dotnet restore "Dobley.Endpoints.Api/Dobley.Endpoints.Api.csproj"
 COPY . .
 WORKDIR "/src/Dobley.Endpoints.Api"

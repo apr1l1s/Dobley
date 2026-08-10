@@ -1,5 +1,5 @@
+using Dobley.Data.Core;
 using Dobley.Endpoints.Gateway.Dto;
-using Dobley.Endpoints.Observability;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.AddDobleyLogging("Dobley.Endpoints.Gateway");

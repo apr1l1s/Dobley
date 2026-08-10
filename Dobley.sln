@@ -23,8 +23,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Domain.Core.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Endpoints.Gateway", "Dobley.Endpoints.Gateway\Dobley.Endpoints.Gateway.csproj", "{5FCBB078-3610-4460-97A0-03BC81A746D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Endpoints.Observability", "Dobley.Endpoints.Observability\Dobley.Endpoints.Observability.csproj", "{9C95E83D-A109-4981-80B9-2C41E0BD3336}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -107,18 +105,6 @@ Global
 		{5FCBB078-3610-4460-97A0-03BC81A746D1}.Release|x64.Build.0 = Release|Any CPU
 		{5FCBB078-3610-4460-97A0-03BC81A746D1}.Release|x86.ActiveCfg = Release|Any CPU
 		{5FCBB078-3610-4460-97A0-03BC81A746D1}.Release|x86.Build.0 = Release|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Debug|x64.Build.0 = Debug|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Debug|x86.Build.0 = Debug|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Release|x64.ActiveCfg = Release|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Release|x64.Build.0 = Release|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Release|x86.ActiveCfg = Release|Any CPU
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -129,6 +115,5 @@ Global
 		{502250DA-2094-4065-8811-907626174D3A} = {85B66326-42B6-4968-B7FC-617D16D6DC59}
 		{16FF0B45-8C7B-4E11-81BA-A0B74BC2D201} = {85B66326-42B6-4968-B7FC-617D16D6DC59}
 		{5FCBB078-3610-4460-97A0-03BC81A746D1} = {85B66326-42B6-4968-B7FC-617D16D6DC59}
-		{9C95E83D-A109-4981-80B9-2C41E0BD3336} = {85B66326-42B6-4968-B7FC-617D16D6DC59}
 	EndGlobalSection
 EndGlobal

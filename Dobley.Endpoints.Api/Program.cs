@@ -8,7 +8,6 @@ using Dobley.Domain.Core.UseCases.Products;
 using Dobley.Domain.Core.UseCases.Storages;
 using Dobley.Endpoints.Api.ExceptionHandling;
 using Dobley.Endpoints.Api.Dto;
-using Dobley.Endpoints.Observability;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;

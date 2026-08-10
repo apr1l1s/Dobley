@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.16" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.16">
         <PrivateAssets>all</PrivateAssets>
@@ -22,7 +26,9 @@
       <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.16" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.16" />
       <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.18.0" />
+      <PackageReference Include="NLog.Extensions.Logging" Version="6.1.0" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+      <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
     </ItemGroup>
 
