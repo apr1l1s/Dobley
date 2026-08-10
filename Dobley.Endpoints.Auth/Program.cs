@@ -10,8 +10,15 @@ builder.Host.ConfigureAppServices(isLocal);
 
 var services = builder.Services;
 services.AddAuthServices();
+services.AddEndpointsApiExplorer();
+services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.MapGet("/health", () => Results.Ok());
 
 app.MapPost("/login", async ([FromBody] UserCredentials credentials, [FromServices] IAuthService auth)
     => await auth.Login(credentials.Login, credentials.Password) is { } token
@@ -21,7 +28,9 @@ app.MapPost("/login", async ([FromBody] UserCredentials credentials, [FromServic
 app.MapPost("/reg", async ([FromBody] UserCredentials credentials, [FromServices] IAuthService auth)
         => await auth.Register(credentials.Login, credentials.Password)
             ? Results.Ok()
-            : Results.Forbid());
+            : Results.Conflict())
+    .Produces(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status409Conflict);
 
 app.Run();
 

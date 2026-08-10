@@ -18,8 +18,10 @@
     ports:
       - "${API_PORT:-5001}:${API_PORT:-5001}"
     depends_on:
-      - dobley.endpoints.auth
-      - dobley.databases.base
+      dobley.endpoints.auth:
+        condition: service_started
+      dobley.databases.base:
+        condition: service_healthy
 
   dobley.endpoints.auth:
     image: dobley.endpoints.auth
@@ -40,7 +42,8 @@
     ports:
       - "${AUTH_PORT:-5002}:${AUTH_PORT:-5002}"
     depends_on:
-      - dobley.databases.base
+      dobley.databases.base:
+        condition: service_healthy
 
   dobley.databases.base:
     image: postgres:latest
@@ -50,11 +53,16 @@
       POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
       POSTGRES_DB: postgres
     volumes:
-      - /var/lib/postgres
+      - dobley_databases_volume:/var/lib/postgresql/data
     networks:
       - dobley-network
     ports:
-      - "${AUTH_PORT:-5432}:${AUTH_PORT:-5432}"
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
 
 networks:
@@ -63,5 +71,5 @@ networks:
 
 volumes:
   dobley_databases_volume:
-    name: /var/lib/postgres
+    name: dobley_databases_volume
     driver: local

@@ -1,10 +1,12 @@
 using System.Text;
 using Dobley.Data.Core;
+using Dobley.Domain.Core.Errors.Entities;
 using Dobley.Domain.Core.Forms;
 using Dobley.Domain.Core.Repositories.Products;
 using Dobley.Domain.Core.UseCases;
 using Dobley.Domain.Core.UseCases.Products;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
@@ -28,17 +30,39 @@ services.AddAuthentication(options =>
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = "your-auth-service",
-            ValidAudience = "your-audience",
+            ValidIssuer = "apr1l1s_auth",
+            ValidAudience = "apr1l1s_services",
             IssuerSigningKey =
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("SECRET_KEY")!))
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(DependencyInjection.GetRequiredSecretKey()))
         };
     });
 
 builder.Services.AddAuthorization();
 builder.Services.AddCoreServices();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exception = context.Features.Get<IExceptionHandlerPathFeature>()?.Error;
+        if (exception is DomainValidateProductException or DomainValidateStorageException)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(new { error = exception.Message });
+            return;
+        }
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(new { error = "Unexpected server error." });
+    });
+});
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();
