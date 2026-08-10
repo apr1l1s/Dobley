@@ -16,15 +16,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.16" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.16" />
-      <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
-      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
+      <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Dobley.Data.Core\Dobley.Data.Core.csproj" />
-      <ProjectReference Include="..\Dobley.Domain.Core\Dobley.Domain.Core.csproj" />
       <ProjectReference Include="..\Dobley.Observability\Dobley.Observability.csproj" />
     </ItemGroup>
 

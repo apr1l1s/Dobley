@@ -18,6 +18,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Dobley.Data.Core\Dobley.Data.Core.csproj" />
       <ProjectReference Include="..\Dobley.Domain.Core\Dobley.Domain.Core.csproj" />
+      <ProjectReference Include="..\Dobley.Observability\Dobley.Observability.csproj" />
     </ItemGroup>
 
     <ItemGroup>

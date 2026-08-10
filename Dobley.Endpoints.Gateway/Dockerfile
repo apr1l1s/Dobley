@@ -10,20 +10,18 @@ USER $APP_UID
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Dobley.Endpoints.Api/Dobley.Endpoints.Api.csproj", "Dobley.Endpoints.Api/"]
-COPY ["Dobley.Data.Core/Dobley.Data.Core.csproj", "Dobley.Data.Core/"]
-COPY ["Dobley.Domain.Core/Dobley.Domain.Core.csproj", "Dobley.Domain.Core/"]
+COPY ["Dobley.Endpoints.Gateway/Dobley.Endpoints.Gateway.csproj", "Dobley.Endpoints.Gateway/"]
 COPY ["Dobley.Observability/Dobley.Observability.csproj", "Dobley.Observability/"]
-RUN dotnet restore "Dobley.Endpoints.Api/Dobley.Endpoints.Api.csproj"
+RUN dotnet restore "Dobley.Endpoints.Gateway/Dobley.Endpoints.Gateway.csproj"
 COPY . .
-WORKDIR "/src/Dobley.Endpoints.Api"
-RUN dotnet build "./Dobley.Endpoints.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Dobley.Endpoints.Gateway"
+RUN dotnet build "./Dobley.Endpoints.Gateway.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Dobley.Endpoints.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Dobley.Endpoints.Gateway.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Dobley.Endpoints.Api.dll"]
+ENTRYPOINT ["dotnet", "Dobley.Endpoints.Gateway.dll"]
