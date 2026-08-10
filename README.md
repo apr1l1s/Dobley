@@ -263,19 +263,19 @@ JWT_AUDIENCE                audience JWT, значение по умолчани
 REDIS_CONNECTION            подключение к Redis для refresh-токенов
 SEED_DEV_DATA               включение локальных демо-данных
 OTEL_EXPORTER_OTLP_ENDPOINT endpoint OpenTelemetry Collector
-LOG_FILE_PATH               путь к локальному fallback log file
+LOG_FILE_PATH               путь к базовому локальному fallback log file для NLog
 ```
 
 При пустом `REDIS_CONNECTION` приложение использует in-memory cache. Режим `SEED_DEV_DATA=true` создаёт локальные демонстрационные данные: пользователя `demo` с паролем `password`, одно хранилище и один продукт. По умолчанию сидинг выключен.
 
 ## Логирование и наблюдаемость
 
-Сервисы используют стандартный `ILogger` и OpenTelemetry.
+Сервисы используют стандартный `ILogger`, NLog и OpenTelemetry.
 
 ```text
 Центральные логи: OpenTelemetry Collector -> Elasticsearch
 UI логов: Grafana на http://localhost:3000
-Локальный fallback: Docker volumes с daily rolling log files для каждого сервиса
+Локальный fallback: NLog пишет daily log files в Docker volumes для каждого сервиса
 Gateway/API/Auth request logs: method, path, status code, elapsed time, trace id
 Auth logs: регистрация, вход, refresh rotation, logout без паролей и токенов
 API exception logs: предупреждения доменной валидации и необработанные ошибки
@@ -304,4 +304,4 @@ Warnings, Errors, 4xx, 5xx
 Raw Documents
 ```
 
-Локальные fallback logs сохраняются в Docker volumes как daily rolling files, например `/app/logs/api-YYYYMMDD.log`.
+Локальные fallback logs сохраняются в Docker volumes через NLog как daily files, например `/app/logs/api-2026-08-11.log`.

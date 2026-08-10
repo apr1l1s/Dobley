@@ -3,8 +3,12 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NLog.Config;
+using NLog.Extensions.Logging;
+using NLog.Targets;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
+using MsLogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Dobley.Endpoints.Observability;
 
@@ -30,8 +34,14 @@ public static class LoggingExtensions
         }
 
         builder.Logging.ClearProviders();
-        builder.Logging.AddConsole();
-        builder.Logging.AddProvider(new RollingFileLoggerProvider(logFilePath));
+        builder.Logging.AddNLog(CreateNLogConfiguration(logFilePath), new NLogProviderOptions
+        {
+            CaptureMessageTemplates = true,
+            CaptureMessageProperties = true,
+            IncludeScopes = true,
+            RemoveLoggerFactoryFilter = false,
+            ShutdownOnDispose = true
+        });
         builder.Logging.AddOpenTelemetry(options =>
         {
             options.IncludeFormattedMessage = true;
@@ -41,12 +51,53 @@ public static class LoggingExtensions
             options.AddOtlpExporter(exporterOptions => exporterOptions.Endpoint = new Uri(otlpEndpoint));
         });
 
-        builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
-        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
-        builder.Logging.AddFilter("Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager", LogLevel.Error);
-        builder.Logging.AddFilter("Yarp", LogLevel.Information);
+        builder.Logging.AddFilter("Microsoft", MsLogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.AspNetCore", MsLogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager", MsLogLevel.Error);
+        builder.Logging.AddFilter("Yarp", MsLogLevel.Information);
 
         return builder;
+    }
+
+    private static LoggingConfiguration CreateNLogConfiguration(string logFilePath)
+    {
+        var layout = "${longdate} [${uppercase:${level}}] ${logger}: ${message} ${exception:format=tostring}";
+        var configuration = new LoggingConfiguration();
+        var consoleTarget = new ConsoleTarget("console")
+        {
+            Layout = layout
+        };
+        var fileTarget = new FileTarget("file")
+        {
+            FileName = GetDailyLogFileName(logFilePath),
+            KeepFileOpen = false,
+            CreateDirs = true,
+            Layout = layout
+        };
+
+        configuration.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, consoleTarget);
+        configuration.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, fileTarget);
+
+        return configuration;
+    }
+
+    private static string GetDailyLogFileName(string logFilePath)
+    {
+        var directoryPath = Path.GetDirectoryName(logFilePath);
+        var fileName = Path.GetFileNameWithoutExtension(logFilePath);
+        var extension = Path.GetExtension(logFilePath);
+
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            directoryPath = ".";
+        }
+
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".log";
+        }
+
+        return Path.Combine(directoryPath, $"{fileName}-${{shortdate}}{extension}");
     }
 
     public static IApplicationBuilder UseDobleyRequestLogging(this IApplicationBuilder app)
@@ -66,8 +117,8 @@ public static class LoggingExtensions
                 var elapsed = TimeProvider.System.GetElapsedTime(startedAt);
                 var statusCode = context.Response.StatusCode;
                 var logLevel = statusCode >= StatusCodes.Status500InternalServerError || elapsed.TotalSeconds > 1
-                    ? LogLevel.Warning
-                    : LogLevel.Information;
+                    ? MsLogLevel.Warning
+                    : MsLogLevel.Information;
 
                 logger.Log(logLevel,
                     "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMilliseconds} ms. TraceId: {TraceId}",
