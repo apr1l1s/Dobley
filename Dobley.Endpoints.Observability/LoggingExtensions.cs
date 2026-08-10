@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 
-namespace Dobley.Observability;
+namespace Dobley.Endpoints.Observability;
 
 public static class LoggingExtensions
 {

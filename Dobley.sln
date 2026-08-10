@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Domain.Core.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Endpoints.Gateway", "Dobley.Endpoints.Gateway\Dobley.Endpoints.Gateway.csproj", "{5FCBB078-3610-4460-97A0-03BC81A746D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Observability", "Dobley.Observability\Dobley.Observability.csproj", "{9C95E83D-A109-4981-80B9-2C41E0BD3336}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dobley.Endpoints.Observability", "Dobley.Endpoints.Observability\Dobley.Endpoints.Observability.csproj", "{9C95E83D-A109-4981-80B9-2C41E0BD3336}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

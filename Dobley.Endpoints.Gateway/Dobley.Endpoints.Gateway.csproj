@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Dobley.Observability\Dobley.Observability.csproj" />
+      <ProjectReference Include="..\Dobley.Endpoints.Observability\Dobley.Endpoints.Observability.csproj" />
     </ItemGroup>
 
 </Project>

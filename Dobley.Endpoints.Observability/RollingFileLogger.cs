@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Dobley.Observability;
+namespace Dobley.Endpoints.Observability;
 
 public sealed class RollingFileLogger(string categoryName, string logFilePath, object writeLock)
     : ILogger
