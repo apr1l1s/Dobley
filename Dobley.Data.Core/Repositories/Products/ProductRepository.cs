@@ -1,69 +1,53 @@
-﻿using Dobley.Domain.Core.Entities.Products;
+using Dobley.Data.Core.Context;
+using Dobley.Domain.Core.Entities.Products;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dobley.Data.Core.Repositories.Products;
 
-public class ProductRepository(DobleyContext context) : IProductRepository
+public class ProductRepository(DobleyContext context)
+    : RepositoryBase<Product, ProductFilter>(context), IProductRepository
 {
-    public Task<Product?> GetItemNullable(int id) => FilterEntities(new ProductFilter(id)).FirstOrDefaultAsync();
+    public override async Task<IReadOnlyList<Product>> GetCollectionAsync(
+        CancellationToken cancellationToken = default, params int[] ids)
+        => await FilterEntities(new ProductFilter(ids)).ToListAsync(cancellationToken);
 
-    public Task<Product> GetItem(int id) => FilterEntities(new ProductFilter(id)).FirstOrDefaultAsync()!;
+    public override async Task<IReadOnlyList<Product>?> GetCollectionAsync(ProductFilter filter,
+        CancellationToken cancellationToken = default)
+        => await FilterEntities(filter).ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<Product>> GetCollectionAsync(params int[] ids)
-        => await context.Products.Where(x => ids.Contains(x.Id)).ToListAsync();
+    public override Task<PaginatedCollection<Product>> GetPaginatedCollection(ProductFilter? filter = null,
+        int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default)
+        => ToPaginatedCollection(FilterEntities(filter), pageIndex, pageSize, cancellationToken);
 
-    public async Task<IReadOnlyList<Product>?> GetCollectionAsync(ProductFilter filter)
-        => await FilterEntities(filter).ToListAsync();
-
-    public Task<PaginatedCollection<Product>> GetPaginatedCollection(ProductFilter? filter = null, int pageIndex = 1,
-        int pageSize = 10)
-        => ToPaginatedCollection(FilterEntities(filter), pageIndex, pageSize);
-
-    public async Task<Product> AddAsync(Product product) => (await context.AddAsync(product)).Entity;
+    public Task<Product?> GetOwnedProductAsync(int id, string userName, CancellationToken cancellationToken = default)
+        => FilterEntities(new ProductFilter(id).SetUserNames([userName])).FirstOrDefaultAsync(cancellationToken);
 
     private IQueryable<Product> FilterEntities(ProductFilter? filter)
     {
-        var products = context.Products.AsQueryable();
+        var products = Context.Products.Include(x => x.DomainStorage).AsQueryable();
 
         if (filter == null)
         {
             return products;
         }
 
-        if (filter.Ids != null)
+        if (filter.Ids is { Count: > 0 })
         {
             products = products.Where(x => filter.Ids.Contains(x.Id));
         }
 
-        if (filter.Names != null)
+        if (filter.Names is { Count: > 0 })
         {
             products = products.Where(x => filter.Names.Contains(x.Name));
         }
 
+        if (filter.UserNames is { Count: > 0 })
+        {
+            products = products.Where(x => filter.UserNames.Contains(x.DomainStorage!.UserName));
+        }
+
         return products;
-    }
-
-    public async Task<PaginatedCollection<TEntity>> ToPaginatedCollection<TEntity>(IQueryable<TEntity> query,
-        int pageIndex, int pageSize)
-    {
-        if (pageIndex < 1)
-        {
-            pageIndex = 1;
-        }
-
-        if (pageSize is < 1 or > 100)
-        {
-            pageSize = 10;
-        }
-
-        var totalCount = await query.CountAsync();
-        var items = await query
-            .Skip((pageIndex - 1) * pageSize) // Пропустить элементы предыдущих страниц
-            .Take(pageSize) // Взять элементы текущей страницы
-            .ToListAsync();
-
-        return new PaginatedCollection<TEntity>(items, pageIndex, pageSize, totalCount);
     }
 }

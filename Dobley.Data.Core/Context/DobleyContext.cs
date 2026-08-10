@@ -3,9 +3,10 @@ using Dobley.Domain.Core.Entities.Storages;
 using Dobley.Domain.Core.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dobley.Data.Core;
+namespace Dobley.Data.Core.Context;
 
-public class DobleyContext : DbContext
+public class DobleyContext
+    : DbContext
 {
     public DobleyContext()
     {
@@ -46,6 +47,7 @@ public class DobleyContext : DbContext
         modelBuilder.Entity<Product>(entity =>
         {
             entity.ToTable("Products");
+            entity.HasQueryFilter(p => p.DateDeleted == null);
 
             entity.HasKey(p => p.Id);
 
@@ -86,6 +88,7 @@ public class DobleyContext : DbContext
         modelBuilder.Entity<Storage>(entity =>
         {
             entity.ToTable("Storages");
+            entity.HasQueryFilter(s => s.DateDeleted == null);
 
             entity.HasKey(s => s.Id);
 
@@ -110,6 +113,7 @@ public class DobleyContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users");
+            entity.HasQueryFilter(u => u.DateDeleted == null);
 
             entity.HasKey(u => u.Login);
 

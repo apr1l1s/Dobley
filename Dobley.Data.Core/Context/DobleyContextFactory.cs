@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Dobley.Data.Core;
+namespace Dobley.Data.Core.Context;
 
-public class DobleyContextFactory : IDesignTimeDbContextFactory<DobleyContext>
+public class DobleyContextFactory
+    : IDesignTimeDbContextFactory<DobleyContext>
 {
     public DobleyContext CreateDbContext(string[] args)
     {

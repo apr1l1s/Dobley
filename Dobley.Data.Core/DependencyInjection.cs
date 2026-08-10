@@ -1,3 +1,4 @@
+using Dobley.Data.Core.Context;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -6,9 +7,11 @@ using System.Text.Json.Serialization.Metadata;
 using System.Text.Unicode;
 using Dobley.Data.Core.Repositories;
 using Dobley.Data.Core.Repositories.Products;
+using Dobley.Data.Core.Repositories.Storages;
 using Dobley.Data.Core.Repositories.Users;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Products;
+using Dobley.Domain.Core.Repositories.Storages;
 using Dobley.Domain.Core.Repositories.Users;
 using Dobley.Domain.Core.UseCases;
 using Microsoft.EntityFrameworkCore;
@@ -90,8 +93,23 @@ public static class DependencyInjection
     {
         services
             .AddDataBase()
+            .AddCache()
             .AddRepositories()
             .AddMediatr();
+
+        return services;
+    }
+
+    public static IServiceCollection AddCache(this IServiceCollection services)
+    {
+        var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION");
+        if (string.IsNullOrEmpty(redisConnection))
+        {
+            services.AddDistributedMemoryCache();
+            return services;
+        }
+
+        services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
 
         return services;
     }
@@ -127,6 +145,7 @@ public static class DependencyInjection
         services
             .AddScoped<ICommonRepository, CommonRepository>()
             .AddScoped<IProductRepository, ProductRepository>()
+            .AddScoped<IStorageRepository, StorageRepository>()
             .AddScoped<IUserRepository, UserRepository>();
 
         return services;
@@ -146,6 +165,12 @@ public static class DependencyInjection
 
         return secretKey;
     }
+
+    public static string GetJwtIssuer()
+        => Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "apr1l1s_auth";
+
+    public static string GetJwtAudience()
+        => Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "apr1l1s_services";
 
     private static string GetConnectionString()
     {

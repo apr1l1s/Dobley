@@ -3,6 +3,7 @@ using System;
 using Dobley.Data.Core.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Dobley.Data.Core.Migrations
 {
     [DbContext(typeof(DobleyContext))]
-    partial class DobleyContextModelSnapshot : ModelSnapshot
+    [Migration("20260810160211_AddAuditAndSoftDelete")]
+    partial class AddAuditAndSoftDelete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
