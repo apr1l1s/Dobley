@@ -1,22 +1,22 @@
 # Dobley
 
-Dobley - небольшой backend на .NET для учёта продуктов в пользовательских хранилищах. Решение разделено на endpoint, domain и data проекты: API остаётся тонким, а бизнес-правила живут в доменных сущностях и use case'ах.
+Dobley представляет собой backend-систему на .NET для учёта продуктов в пользовательских хранилищах. Архитектура решения разделена на endpoint-, domain- и data-слои. Endpoint-проекты отвечают за HTTP-контракты, доменный слой содержит бизнес-правила и сценарии, data-слой инкапсулирует работу с базой данных, миграциями, репозиториями и инфраструктурными зависимостями.
 
 ## Структура проекта
 
 ```text
 Dobley.Endpoints.Api       API продуктов и хранилищ, JWT-авторизация, Swagger
 Dobley.Endpoints.Auth      Регистрация, вход, refresh-токены, выпуск JWT, Swagger
-Dobley.Endpoints.Gateway   YARP gateway для маршрутизации Auth/API
+Dobley.Endpoints.Gateway   YARP gateway для маршрутизации запросов к Auth и API
 Dobley.Domain.Core         Сущности, валидация, формы, use cases, контракты репозиториев
 Dobley.Data.Core           EF Core DbContext, репозитории, миграции, dependency injection
 Dobley.Domain.Core.Tests   Тесты доменной валидации и opt-in smoke-тесты gateway
 compose.yaml               Локальное окружение Gateway/API/Auth/Postgres/Redis/Elastic/Grafana
 ```
 
-## Структура БД
+## Структура базы данных
 
-Текущая EF Core модель:
+Текущая EF Core модель содержит следующие таблицы:
 
 ```text
 Users
@@ -50,19 +50,27 @@ Products
 - DateDeleted timestamp nullable
 ```
 
-Миграции лежат в `Dobley.Data.Core/Migrations`.
+Миграции расположены в каталоге `Dobley.Data.Core/Migrations`.
 
-## Локальный запуск
+## Требования для локального запуска
 
-Создай `.env` на основе `.env.example`, затем запусти:
+Для локального запуска требуется:
+
+```text
+Docker
+Docker Compose
+.NET SDK 9.0 для локальной сборки и запуска тестов без контейнеров
+```
+
+Конфигурация окружения задаётся через файл `.env`, формируемый на основе `.env.example`.
 
 ```powershell
 docker compose up --build
 ```
 
-Значения в `.env.example` подходят только для локальной разработки. Перед использованием вне локального демо поменяй `SECRET_KEY`, доступы к базе и пароль Grafana.
+Значения из `.env.example` предназначены для локальной разработки и демонстрационного запуска. Для сред, отличных от локального окружения, требуется переопределение `SECRET_KEY`, реквизитов базы данных и учётных данных Grafana.
 
-Адреса по умолчанию:
+Адреса сервисов по умолчанию:
 
 ```text
 Gateway: http://localhost:5000
@@ -73,7 +81,7 @@ Grafana: http://localhost:3000
 Elasticsearch: http://localhost:9200
 ```
 
-Auth и Product API доступны как внутренние Docker-сервисы. Клиентские запросы нужно отправлять через gateway.
+Auth и Product API являются внутренними Docker-сервисами. Клиентские запросы направляются через gateway.
 
 Маршруты gateway:
 
@@ -82,17 +90,17 @@ Auth и Product API доступны как внутренние Docker-серв
 /api/*  -> Dobley.Endpoints.Api
 ```
 
-## Демо-сценарий
+## Демонстрационный сценарий
 
-Можно использовать Postman collection из `postman/Dobley.postman_collection.json` или отправлять такие же запросы вручную через gateway.
+Для проверки API может использоваться Postman collection из `postman/Dobley.postman_collection.json`. Эквивалентные HTTP-запросы могут быть выполнены вручную через gateway.
 
-1. Запустить stack:
+1. Запуск контейнерного окружения:
 
 ```powershell
 docker compose up --build
 ```
 
-2. Проверить health endpoints:
+2. Проверка health endpoints:
 
 ```http
 GET http://127.0.0.1:5000/health
@@ -100,7 +108,7 @@ GET http://127.0.0.1:3000/api/health
 GET http://127.0.0.1:9200/_cluster/health
 ```
 
-3. Зарегистрироваться и войти:
+3. Регистрация пользователя:
 
 ```http
 POST http://127.0.0.1:5000/auth/reg
@@ -112,6 +120,8 @@ Content-Type: application/json
 }
 ```
 
+4. Получение пары access/refresh token:
+
 ```http
 POST http://127.0.0.1:5000/auth/login
 Content-Type: application/json
@@ -122,7 +132,7 @@ Content-Type: application/json
 }
 ```
 
-4. Создать хранилище и продукт с полученным bearer token:
+5. Создание хранилища:
 
 ```http
 POST http://127.0.0.1:5000/api/storages/create
@@ -134,6 +144,8 @@ Content-Type: application/json
   "description": "Kitchen fridge"
 }
 ```
+
+6. Создание продукта:
 
 ```http
 POST http://127.0.0.1:5000/api/products/create
@@ -152,7 +164,7 @@ Content-Type: application/json
 }
 ```
 
-5. Спровоцировать ошибку валидации и посмотреть её в Grafana:
+7. Пример запроса с ошибкой валидации:
 
 ```http
 POST http://127.0.0.1:5000/api/products/create
@@ -170,85 +182,20 @@ Content-Type: application/json
 }
 ```
 
-API вернёт русское сообщение об ошибке, а запрос появится в Grafana как `400` log record.
+В случае некорректного тела запроса API возвращает `400` с русским сообщением об ошибке. Соответствующая запись также попадает в централизованное логирование и отображается в Grafana.
 
-## Примеры запросов
+## Основные HTTP endpoints
 
-Регистрация и вход:
+Auth:
 
-```http
+```text
 POST /auth/reg
-Content-Type: application/json
-
-{
-  "login": "demo",
-  "password": "password"
-}
-```
-
-```http
 POST /auth/login
-Content-Type: application/json
-
-{
-  "login": "demo",
-  "password": "password"
-}
-```
-
-Обновление access token:
-
-```http
 POST /auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "<refresh-token>"
-}
-```
-
-Выход:
-
-```http
 POST /auth/logout
-Content-Type: application/json
-
-{
-  "refreshToken": "<refresh-token>"
-}
 ```
 
-Создание хранилища и продукта:
-
-```http
-POST /api/storages/create
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "name": "Fridge",
-  "description": "Kitchen fridge"
-}
-```
-
-```http
-POST /api/products/create
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "name": "Milk",
-  "description": "Fresh milk",
-  "price": 120,
-  "category": "Dairy",
-  "unit": 1,
-  "unitType": "Liters",
-  "barcode": "4600000000000",
-  "storageId": 1
-}
-```
-
-Методы продуктов и хранилищ работают только с данными текущего JWT-пользователя:
+Storages:
 
 ```text
 GET /api/storages
@@ -256,6 +203,11 @@ GET /api/storages/{id}
 PUT /api/storages/{id}
 DELETE /api/storages/{id}
 POST /api/storages/create
+```
+
+Products:
+
+```text
 GET /api/products
 GET /api/products/{id}
 PUT /api/products/{id}
@@ -263,22 +215,36 @@ DELETE /api/products/{id}
 POST /api/products/create
 ```
 
-## Проверки для разработки
+Методы продуктов и хранилищ возвращают и изменяют только данные, принадлежащие текущему JWT-пользователю.
+
+## Проверки разработки
+
+Сборка решения:
 
 ```powershell
 dotnet build Dobley.sln
+```
+
+Запуск тестов:
+
+```powershell
 dotnet test Dobley.sln
+```
+
+Применение миграций:
+
+```powershell
 dotnet ef database update --project Dobley.Data.Core
 ```
 
-Gateway smoke-тесты выключены по умолчанию, потому что требуют запущенный Docker stack:
+Gateway smoke-тесты выключены по умолчанию, поскольку требуют запущенного Docker stack:
 
 ```powershell
 $env:DOBLEY_RUN_GATEWAY_TESTS='true'
 dotnet test Dobley.sln --filter FullyQualifiedName~GatewaySmokeTests
 ```
 
-Они проверяют:
+Smoke-тесты проверяют:
 
 ```text
 Gateway health возвращает 200
@@ -286,11 +252,25 @@ Gateway health возвращает 200
 Создание продукта с некорректным телом возвращает русский 400 response
 ```
 
-`SECRET_KEY` обязателен при запуске и должен содержать минимум 32 байта. `JWT_ISSUER` и `JWT_AUDIENCE` по умолчанию равны `apr1l1s_auth` и `apr1l1s_services`. `REDIS_CONNECTION` используется для хранения refresh-токенов в Redis; если переменная пустая, приложение использует in-memory cache. `SEED_DEV_DATA=true` включает локальные демо-данные: пользователь `demo` с паролем `password`, одно хранилище и один продукт. По умолчанию сидинг выключен.
+## Конфигурация
+
+Ключевые переменные окружения:
+
+```text
+SECRET_KEY                  секрет JWT, минимум 32 байта
+JWT_ISSUER                  issuer JWT, значение по умолчанию apr1l1s_auth
+JWT_AUDIENCE                audience JWT, значение по умолчанию apr1l1s_services
+REDIS_CONNECTION            подключение к Redis для refresh-токенов
+SEED_DEV_DATA               включение локальных демо-данных
+OTEL_EXPORTER_OTLP_ENDPOINT endpoint OpenTelemetry Collector
+LOG_FILE_PATH               путь к локальному fallback log file
+```
+
+При пустом `REDIS_CONNECTION` приложение использует in-memory cache. Режим `SEED_DEV_DATA=true` создаёт локальные демонстрационные данные: пользователя `demo` с паролем `password`, одно хранилище и один продукт. По умолчанию сидинг выключен.
 
 ## Логирование и наблюдаемость
 
-Сервисы используют стандартный `ILogger` и OpenTelemetry:
+Сервисы используют стандартный `ILogger` и OpenTelemetry.
 
 ```text
 Центральные логи: OpenTelemetry Collector -> Elasticsearch
@@ -308,9 +288,9 @@ URL: http://localhost:3000
 Локальный логин по умолчанию: admin
 Локальный пароль по умолчанию: admin
 Dashboard: Dobley Observability
-Service filter: "*" показывает Gateway, API и Auth вместе
+Service filter: "*" отображает Gateway, API и Auth вместе
 Search filter: по умолчанию "Body:*"; примеры: Body:"products", Attributes.Path:"/api/products/"
-Refresh: 5 секунд; Elasticsearch может отставать на несколько секунд после запроса
+Refresh: 5 секунд; Elasticsearch может отображать логи с задержкой в несколько секунд
 ```
 
 Dashboard содержит:
@@ -324,11 +304,4 @@ Warnings, Errors, 4xx, 5xx
 Raw Documents
 ```
 
-Переменные окружения для логирования:
-
-```text
-OTEL_EXPORTER_OTLP_ENDPOINT=http://dobley.otel-collector:4317
-LOG_FILE_PATH=/app/logs/<service>.log
-```
-
-Локальные fallback logs пишутся в Docker volumes как daily rolling files, например `/app/logs/api-YYYYMMDD.log`.
+Локальные fallback logs сохраняются в Docker volumes как daily rolling files, например `/app/logs/api-YYYYMMDD.log`.
