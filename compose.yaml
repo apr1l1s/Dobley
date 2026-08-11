@@ -28,6 +28,33 @@ services:
         condition: service_healthy
       dobley.auth:
         condition: service_healthy
+      dobley.ui:
+        condition: service_healthy
+    restart: always
+
+  dobley.ui:
+    image: dobley.endpoints.ui
+    container_name: dobley.ui
+    build:
+      context: .
+      dockerfile: Dobley.Endpoints.Ui/Dockerfile
+    environment:
+      ASPNETCORE_HTTP_PORTS: 5003
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://dobley.otel-collector:4317}
+      LOG_FILE_PATH: /app/logs/ui.log
+      DATA_PROTECTION_KEYS_PATH: /app/data-protection-keys
+    networks:
+      - dobley-network
+    volumes:
+      - dobley_ui_logs:/app/logs
+      - dobley_ui_data_protection_keys:/app/data-protection-keys
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
     restart: always
 
   dobley.api:
@@ -278,6 +305,9 @@ volumes:
   dobley_notifications_logs:
     name: dobley_notifications_logs
     driver: local
+  dobley_ui_logs:
+    name: dobley_ui_logs
+    driver: local
   dobley_gateway_data_protection_keys:
     name: dobley_gateway_data_protection_keys
     driver: local
@@ -289,4 +319,7 @@ volumes:
     driver: local
   dobley_notifications_data_protection_keys:
     name: dobley_notifications_data_protection_keys
+    driver: local
+  dobley_ui_data_protection_keys:
+    name: dobley_ui_data_protection_keys
     driver: local
