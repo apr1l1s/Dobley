@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dobley</title>
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./styles.css?v=20260811-5">
 </head>
 <body>
 <main class="app-shell">
@@ -14,35 +14,31 @@
             <h1>Хранилища и продукты</h1>
         </section>
 
-        <section class="panel">
+        <section id="auth-panel" class="panel">
             <div class="panel-title">
-                <h2>Вход</h2>
+                <h2>Аккаунт</h2>
                 <span id="auth-status" class="status-chip">offline</span>
             </div>
-            <label>
-                Логин
-                <input id="login" autocomplete="username" value="admin">
-            </label>
-            <label>
-                Пароль
-                <input id="password" type="password" autocomplete="current-password" value="Pass12345">
-            </label>
+            <div id="login-form-fields" class="auth-fields">
+                <label>
+                    Логин
+                    <input id="login" autocomplete="username" value="admin">
+                </label>
+                <label>
+                    Пароль
+                    <input id="password" type="password" autocomplete="current-password" value="Pass12345">
+                </label>
+                <div class="button-row auth-actions">
+                    <button id="login-button" type="button">Войти</button>
+                    <button id="register-button" class="secondary" type="button">Зарегистрироваться</button>
+                </div>
+            </div>
+            <div id="auth-online-summary" class="auth-online-summary hidden">
+                Сессия активна. Можно работать с хранилищами, продуктами и Telegram-рассылкой.
+            </div>
             <div class="button-row">
-                <button id="login-button" type="button">Войти</button>
                 <button id="logout-button" class="secondary" type="button">Выйти</button>
             </div>
-        </section>
-
-        <section class="panel">
-            <div class="panel-title">
-                <h2>Telegram</h2>
-            </div>
-            <label>
-                Username бота
-                <input id="telegram-bot" placeholder="my_dobley_bot">
-            </label>
-            <div class="hint">Нужен для ссылки вида t.me/bot?start=CODE.</div>
-            <button id="save-telegram-button" class="secondary" type="button">Сохранить</button>
         </section>
 
         <section class="panel">
@@ -54,8 +50,9 @@
             <div class="button-row">
                 <button id="subscribe-recipient-button" type="button">Включить рассылку</button>
                 <button id="unsubscribe-recipient-button" class="secondary" type="button">Выключить рассылку</button>
+                <button id="unlink-recipient-button" class="danger" type="button">Отключить чат</button>
             </div>
-            <div class="hint">Рассылка включается или выключается для выбранного Telegram-чата целиком.</div>
+            <div class="hint">Выключение рассылки оставляет чат подключенным. Отключение чата полностью отвязывает его от текущего профиля.</div>
         </section>
     </aside>
 
@@ -65,39 +62,51 @@
                 <p class="eyebrow">Рабочая область</p>
                 <h2>Учет продуктов</h2>
             </div>
-            <button id="reload-button" type="button">Обновить</button>
+            <button id="reload-button" class="secondary" type="button" title="Перечитать хранилища, продукты и Telegram-чаты">Обновить данные</button>
         </header>
 
-        <section class="grid-layout">
-            <div class="section-block">
+        <nav class="tabs" aria-label="Разделы" role="tablist">
+            <button id="storages-tab-button" class="tab-button active" data-tab="storages" type="button">Хранилища</button>
+            <button id="products-tab-button" class="tab-button" data-tab="products" type="button">Продукты</button>
+        </nav>
+
+        <section class="tabs-layout">
+            <div id="storages-tab" class="section-block tab-panel">
                 <div class="section-header">
                     <div>
                         <h3>Хранилища</h3>
-                        <p>Выберите хранилище, чтобы работать с продуктами.</p>
+                        <p>Создание, изменение и удаление мест хранения.</p>
                     </div>
                 </div>
 
-                <form id="storage-form" class="editor-form">
-                    <input id="storage-id" type="hidden">
-                    <label>
-                        Название
-                        <input id="storage-name" required placeholder="Домашний холодильник">
-                    </label>
-                    <label>
-                        Описание
-                        <textarea id="storage-description" required placeholder="Основное хранилище"></textarea>
-                    </label>
-                    <div class="button-row">
-                        <button type="submit">Сохранить хранилище</button>
-                        <button id="reset-storage-button" class="secondary" type="button">Очистить</button>
-                    </div>
-                </form>
+                <div class="tab-content-grid">
+                    <div class="editor-column">
+                        <form id="storage-form" class="editor-form">
+                            <input id="storage-id" type="hidden">
+                            <label>
+                                Название
+                                <input id="storage-name" required placeholder="Домашний холодильник">
+                            </label>
+                            <label>
+                                Описание
+                                <textarea id="storage-description" required placeholder="Основное хранилище"></textarea>
+                            </label>
+                            <div class="button-row">
+                                <button type="submit">Сохранить хранилище</button>
+                                <button id="reset-storage-button" class="secondary" type="button">Очистить</button>
+                            </div>
+                        </form>
 
-                <button id="open-telegram-button" class="telegram-wide-button" type="button">Подписаться на обновления в Telegram</button>
-                <div id="storages-list" class="item-list"></div>
+                        <button id="open-telegram-button" class="telegram-wide-button" type="button">Подписаться на обновления в Telegram</button>
+                    </div>
+
+                    <div class="list-column">
+                        <div id="storages-list" class="item-list"></div>
+                    </div>
+                </div>
             </div>
 
-            <div class="section-block">
+            <div id="products-tab" class="section-block tab-panel hidden">
                 <div class="section-header">
                     <div>
                         <h3>Продукты</h3>
@@ -105,49 +114,57 @@
                     </div>
                 </div>
 
-                <form id="product-form" class="editor-form">
-                    <input id="product-id" type="hidden">
-                    <div class="form-grid">
+                <div class="tab-content-grid product-grid">
+                    <form id="product-form" class="editor-form">
+                        <input id="product-id" type="hidden">
                         <label>
-                            Название
-                            <input id="product-name" required placeholder="Хлеб">
+                            Хранилище
+                            <select id="product-storage-select"></select>
                         </label>
+                        <div class="form-grid">
+                            <label>
+                                Название
+                                <input id="product-name" required placeholder="Хлеб">
+                            </label>
+                            <label>
+                                Цена
+                                <input id="product-price" type="number" min="0" step="0.01" required value="78">
+                            </label>
+                            <label>
+                                Категория
+                                <select id="product-category"></select>
+                            </label>
+                            <label>
+                                Количество
+                                <input id="product-unit" type="number" min="0" step="0.01" required value="1">
+                            </label>
+                            <label>
+                                Единица
+                                <select id="product-unit-type"></select>
+                            </label>
+                            <label>
+                                Штрихкод
+                                <input id="product-barcode" required placeholder="75623">
+                            </label>
+                            <label>
+                                Срок годности
+                                <input id="product-expiration" type="date">
+                            </label>
+                        </div>
                         <label>
-                            Цена
-                            <input id="product-price" type="number" min="0" step="0.01" required value="78">
+                            Описание
+                            <textarea id="product-description" required placeholder="Добротный хлеб"></textarea>
                         </label>
-                        <label>
-                            Категория
-                            <select id="product-category"></select>
-                        </label>
-                        <label>
-                            Количество
-                            <input id="product-unit" type="number" min="0" step="0.01" required value="1">
-                        </label>
-                        <label>
-                            Единица
-                            <select id="product-unit-type"></select>
-                        </label>
-                        <label>
-                            Штрихкод
-                            <input id="product-barcode" required placeholder="75623">
-                        </label>
-                        <label>
-                            Срок годности
-                            <input id="product-expiration" type="date">
-                        </label>
-                    </div>
-                    <label>
-                        Описание
-                        <textarea id="product-description" required placeholder="Добротный хлеб"></textarea>
-                    </label>
-                    <div class="button-row">
-                        <button type="submit">Сохранить продукт</button>
-                        <button id="reset-product-button" class="secondary" type="button">Очистить</button>
-                    </div>
-                </form>
+                        <div class="button-row">
+                            <button type="submit">Сохранить продукт</button>
+                            <button id="reset-product-button" class="secondary" type="button">Очистить</button>
+                        </div>
+                    </form>
 
-                <div id="products-list" class="item-list products-list"></div>
+                    <div class="list-column">
+                        <div id="products-list" class="item-list products-list"></div>
+                    </div>
+                </div>
             </div>
         </section>
     </section>
@@ -155,6 +172,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="./config.js"></script>
-<script src="./app.js"></script>
+<script src="./app.js?v=20260811-5"></script>
 </body>
 </html>

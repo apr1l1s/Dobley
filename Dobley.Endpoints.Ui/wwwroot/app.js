@@ -2,34 +2,31 @@ const state = {
     accessToken: localStorage.getItem('dobley.accessToken') || '',
     refreshToken: localStorage.getItem('dobley.refreshToken') || '',
     selectedStorageId: Number(localStorage.getItem('dobley.selectedStorageId')) || null,
+    activeTab: localStorage.getItem('dobley.activeTab') || 'storages',
     storages: [],
     products: [],
     recipients: [],
-    telegramBotUserName: localStorage.getItem('dobley.telegramBotUserName')
-        || window.DobleyUiConfig?.telegramBotUserName
-        || ''
+    telegramBotUserName: window.DobleyUiConfig?.telegramBotUserName || ''
 };
 
-const categories = [
-    'Dairy', 'Cheese', 'Eggs', 'RawMeat', 'FishAndSeafood', 'DeliAndSausages',
-    'Vegetables', 'FruitsAndBerries', 'HerbsAndGreens', 'Beverages',
-    'SaucesAndCondiments', 'ReadyMealsAndLeftovers', 'Bakery',
-    'OpenedCannedGoods', 'BabyFood', 'NonFood'
-];
-
-const unitTypes = [
-    'Grams', 'Kilograms', 'Milligrams', 'Milliliters', 'Liters', 'Pieces',
-    'Servings', 'Packs', 'Jars', 'Bottles', 'Centimeters'
-];
+let categories = [];
+let unitTypes = [];
 
 const byId = id => document.getElementById(id);
 
 const elements = {
+    loginFormFields: byId('login-form-fields'),
+    authOnlineSummary: byId('auth-online-summary'),
     authStatus: byId('auth-status'),
     login: byId('login'),
+    logoutButton: byId('logout-button'),
     password: byId('password'),
-    telegramBot: byId('telegram-bot'),
+    productStorageSelect: byId('product-storage-select'),
     recipientSelect: byId('recipient-select'),
+    storagesTab: byId('storages-tab'),
+    productsTab: byId('products-tab'),
+    storagesTabButton: byId('storages-tab-button'),
+    productsTabButton: byId('products-tab-button'),
     storagesList: byId('storages-list'),
     productsList: byId('products-list'),
     selectedStorageLabel: byId('selected-storage-label'),
@@ -50,7 +47,17 @@ async function request(path, options = {}) {
         if (response.status === 204) {
             return null;
         }
-        return response.json();
+
+        const text = await response.text();
+        if (!text) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
     }
 
     let message = `HTTP ${response.status}`;
@@ -72,25 +79,58 @@ function showToast(message) {
 }
 
 function setAuthStatus() {
-    elements.authStatus.textContent = state.accessToken ? 'online' : 'offline';
-    elements.authStatus.classList.toggle('online', Boolean(state.accessToken));
+    const isOnline = Boolean(state.accessToken);
+    elements.authStatus.textContent = isOnline ? 'online' : 'offline';
+    elements.authStatus.classList.toggle('online', isOnline);
+    elements.loginFormFields.classList.toggle('hidden', isOnline);
+    elements.authOnlineSummary.classList.toggle('hidden', !isOnline);
+    elements.logoutButton.classList.toggle('hidden', !isOnline);
+}
+
+function setActiveTab(tab) {
+    state.activeTab = tab;
+    localStorage.setItem('dobley.activeTab', tab);
+    renderTabs();
+}
+
+function renderTabs() {
+    const isStoragesTab = state.activeTab === 'storages';
+    elements.storagesTab.classList.toggle('hidden', !isStoragesTab);
+    elements.productsTab.classList.toggle('hidden', isStoragesTab);
+    elements.storagesTabButton.classList.toggle('active', isStoragesTab);
+    elements.productsTabButton.classList.toggle('active', !isStoragesTab);
 }
 
 function fillSelect(select, values) {
-    select.replaceChildren(...values.map(value => {
+    const selectedValue = select.value;
+    const options = values.map(value => {
+        const optionValue = read(value, 'name') || value;
         const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
+        option.value = optionValue;
+        option.textContent = read(value, 'displayName') || optionValue;
+        option.selected = optionValue === selectedValue;
         return option;
-    }));
+    });
+
+    if (options.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Справочник не загружен';
+        options.push(option);
+    }
+
+    select.replaceChildren(...options);
 }
 
-async function login() {
-    const body = {
+function getAuthCredentials() {
+    return {
         login: elements.login.value.trim(),
         password: elements.password.value
     };
+}
 
+async function login(options = {}) {
+    const body = getAuthCredentials();
     const tokens = await request('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,7 +143,21 @@ async function login() {
     localStorage.setItem('dobley.refreshToken', state.refreshToken);
     setAuthStatus();
     await loadAll();
-    showToast('Вход выполнен.');
+    if (options.showSuccess !== false) {
+        showToast('Вход выполнен.');
+    }
+}
+
+async function register() {
+    const body = getAuthCredentials();
+    await request('/auth/reg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    await login({ showSuccess: false });
+    showToast('Регистрация выполнена, вход выполнен.');
 }
 
 function logout() {
@@ -120,13 +174,16 @@ function logout() {
 
 async function loadAll() {
     if (!state.accessToken) {
+        await loadProductDictionaries();
         render();
         return;
     }
 
-    await Promise.all([loadStorages(), loadRecipients()]);
+    await Promise.all([loadProductDictionaries(), loadStorages(), loadRecipients()]);
     if (state.selectedStorageId) {
         await loadProducts();
+    } else {
+        state.products = [];
     }
     render();
 }
@@ -138,6 +195,11 @@ async function loadStorages() {
     state.storages = read(data, 'collection') || [];
     if (!state.storages.some(x => read(x, 'id') === state.selectedStorageId)) {
         state.selectedStorageId = read(state.storages[0], 'id') || null;
+        if (state.selectedStorageId) {
+            localStorage.setItem('dobley.selectedStorageId', String(state.selectedStorageId));
+        } else {
+            localStorage.removeItem('dobley.selectedStorageId');
+        }
     }
 }
 
@@ -153,6 +215,17 @@ async function loadRecipients() {
     state.recipients = await request('/api/notifications/recipients', {
         headers: authHeaders()
     });
+}
+
+async function loadProductDictionaries() {
+    const [loadedCategories, loadedUnitTypes] = await Promise.all([
+        request('/api/products/categories'),
+        request('/api/products/unit-types')
+    ]);
+
+    categories = loadedCategories || [];
+    unitTypes = loadedUnitTypes || [];
+    renderProductDictionaries();
 }
 
 async function saveStorage(event) {
@@ -177,6 +250,16 @@ async function saveStorage(event) {
 }
 
 async function deleteStorage(id) {
+    const storage = state.storages.find(x => read(x, 'id') === id);
+    const storageName = read(storage, 'name') || `#${id}`;
+    const confirmed = window.confirm(
+        `Удалить хранилище "${storageName}"? Все продукты внутри него тоже будут удалены.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
     await request(`/api/storages/${id}`, {
         method: 'DELETE',
         headers: authHeaders()
@@ -233,20 +316,33 @@ async function deleteProduct(id) {
 }
 
 async function createInviteAndOpenTelegram() {
-    const invite = await request('/api/notifications/invites/create', {
-        method: 'POST',
-        headers: authHeaders(true),
-        body: JSON.stringify({ expiresAt: null })
-    });
-
     const bot = state.telegramBotUserName.replace('@', '').trim();
     if (!bot) {
-        showToast(`Код создан: ${read(invite, 'code')}. Укажи username бота, чтобы открыть Telegram ссылкой.`);
+        showToast('Username Telegram-бота не настроен в TELEGRAM_BOT_USERNAME.');
         return;
     }
 
+    const telegramWindow = window.open('about:blank', '_blank');
+    let invite;
+    try {
+        invite = await request('/api/notifications/invites/create', {
+            method: 'POST',
+            headers: authHeaders(true),
+            body: JSON.stringify({ expiresAt: null })
+        });
+    } catch (error) {
+        telegramWindow?.close();
+        throw error;
+    }
+
     const code = read(invite, 'code');
-    window.open(`https://t.me/${encodeURIComponent(bot)}?start=${encodeURIComponent(code)}`, '_blank');
+    const telegramUrl = `https://t.me/${encodeURIComponent(bot)}?start=${encodeURIComponent(code)}`;
+    if (telegramWindow) {
+        telegramWindow.location.href = telegramUrl;
+    } else {
+        window.location.href = telegramUrl;
+    }
+
     showToast(`Код ${code} создан. Telegram открыт.`);
 }
 
@@ -288,6 +384,33 @@ async function unsubscribeSelectedRecipient() {
     });
 
     showToast('Рассылка для чата выключена.');
+}
+
+async function unlinkSelectedRecipient() {
+    const recipientId = Number(elements.recipientSelect.value);
+    if (!recipientId) {
+        showToast('Сначала выбери подключенный чат.');
+        return;
+    }
+
+    const recipient = state.recipients.find(x => read(x, 'id') === recipientId);
+    const recipientName = read(recipient, 'displayName') || read(recipient, 'externalId') || `#${recipientId}`;
+    const confirmed = window.confirm(
+        `Отключить Telegram-чат "${recipientName}" от текущего профиля? Рассылка для него тоже будет удалена.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    await request(`/api/notifications/recipients/${recipientId}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+    });
+
+    await loadRecipients();
+    renderRecipients();
+    showToast('Telegram-чат отключен от профиля.');
 }
 
 function editStorage(storage) {
@@ -345,7 +468,38 @@ function renderRecipients() {
     elements.recipientSelect.replaceChildren(...options);
 }
 
+function renderProductStorageSelect() {
+    const options = state.storages.map(storage => {
+        const storageId = read(storage, 'id');
+        const option = document.createElement('option');
+        option.value = storageId;
+        option.textContent = read(storage, 'name');
+        option.selected = storageId === state.selectedStorageId;
+        return option;
+    });
+
+    if (options.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Нет доступных хранилищ';
+        options.push(option);
+    }
+
+    elements.productStorageSelect.replaceChildren(...options);
+    elements.productStorageSelect.disabled = options.length === 1 && options[0].value === '';
+}
+
+function renderProductDictionaries() {
+    fillSelect(byId('product-category'), categories);
+    fillSelect(byId('product-unit-type'), unitTypes);
+}
+
 function renderStorages() {
+    if (state.storages.length === 0) {
+        elements.storagesList.replaceChildren(createEmptyState('Хранилищ пока нет. Создай первое место хранения слева.'));
+        return;
+    }
+
     elements.storagesList.replaceChildren(...state.storages.map(storage => {
         const storageId = read(storage, 'id');
         const card = document.createElement('article');
@@ -371,6 +525,16 @@ function renderProducts() {
         ? `Выбрано: ${read(storage, 'name')}`
         : 'Хранилище не выбрано.';
 
+    if (!state.selectedStorageId) {
+        elements.productsList.replaceChildren(createEmptyState('Выбери хранилище, чтобы увидеть продукты.'));
+        return;
+    }
+
+    if (state.products.length === 0) {
+        elements.productsList.replaceChildren(createEmptyState('В этом хранилище пока нет продуктов.'));
+        return;
+    }
+
     elements.productsList.replaceChildren(...state.products.map(product => {
         const productId = read(product, 'id');
         const card = document.createElement('article');
@@ -383,8 +547,8 @@ function renderProducts() {
                 <p>${escapeHtml(read(product, 'description'))}</p>
             </div>
             <div class="meta-row">
-                <span class="meta">${escapeHtml(read(product, 'category'))}</span>
-                <span class="meta">${read(product, 'unit')} ${escapeHtml(read(product, 'unitType'))}</span>
+                <span class="meta">${escapeHtml(getDictionaryDisplayName(categories, read(product, 'category')))}</span>
+                <span class="meta">${read(product, 'unit')} ${escapeHtml(getDictionaryDisplayName(unitTypes, read(product, 'unitType')))}</span>
                 <span class="meta">${read(product, 'price')} ₽</span>
                 ${expirationDate ? `<span class="meta ${daysLeft <= 3 ? 'warning' : ''}">до ${formatDate(expirationDate)}</span>` : ''}
             </div>
@@ -397,10 +561,24 @@ function renderProducts() {
     }));
 }
 
+function createEmptyState(message) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = message;
+    return emptyState;
+}
+
+function getDictionaryDisplayName(dictionary, name) {
+    const item = dictionary.find(x => read(x, 'name') === name);
+
+    return read(item, 'displayName') || name;
+}
+
 function render() {
     setAuthStatus();
-    elements.telegramBot.value = state.telegramBotUserName;
+    renderTabs();
     renderRecipients();
+    renderProductStorageSelect();
     renderStorages();
     renderProducts();
 }
@@ -439,20 +617,30 @@ function read(source, name) {
 
 function wireEvents() {
     byId('login-button').addEventListener('click', () => run(login));
+    byId('register-button').addEventListener('click', () => run(register));
     byId('logout-button').addEventListener('click', logout);
     byId('reload-button').addEventListener('click', () => run(loadAll));
+    elements.storagesTabButton.addEventListener('click', () => setActiveTab('storages'));
+    elements.productsTabButton.addEventListener('click', () => setActiveTab('products'));
+    elements.productStorageSelect.addEventListener('change', () => run(async () => {
+        state.selectedStorageId = Number(elements.productStorageSelect.value) || null;
+        if (state.selectedStorageId) {
+            localStorage.setItem('dobley.selectedStorageId', String(state.selectedStorageId));
+        } else {
+            localStorage.removeItem('dobley.selectedStorageId');
+        }
+
+        await loadProducts();
+        render();
+    }));
     byId('refresh-recipients-button').addEventListener('click', () => run(async () => {
         await loadRecipients();
         renderRecipients();
     }));
-    byId('save-telegram-button').addEventListener('click', () => {
-        state.telegramBotUserName = elements.telegramBot.value.trim().replace('@', '');
-        localStorage.setItem('dobley.telegramBotUserName', state.telegramBotUserName);
-        showToast('Telegram username сохранен.');
-    });
     byId('open-telegram-button').addEventListener('click', () => run(createInviteAndOpenTelegram));
     byId('subscribe-recipient-button').addEventListener('click', () => run(subscribeSelectedRecipient));
     byId('unsubscribe-recipient-button').addEventListener('click', () => run(unsubscribeSelectedRecipient));
+    byId('unlink-recipient-button').addEventListener('click', () => run(unlinkSelectedRecipient));
     byId('storage-form').addEventListener('submit', event => run(() => saveStorage(event)));
     byId('product-form').addEventListener('submit', event => run(() => saveProduct(event)));
     byId('reset-storage-button').addEventListener('click', resetStorageForm);
@@ -468,6 +656,7 @@ function wireEvents() {
         if (button.dataset.action === 'select-storage') {
             state.selectedStorageId = id;
             localStorage.setItem('dobley.selectedStorageId', String(id));
+            setActiveTab('products');
             await loadProducts();
             render();
         }
@@ -503,8 +692,7 @@ async function run(action) {
     }
 }
 
-fillSelect(byId('product-category'), categories);
-fillSelect(byId('product-unit-type'), unitTypes);
+renderProductDictionaries();
 wireEvents();
 render();
 run(loadAll);

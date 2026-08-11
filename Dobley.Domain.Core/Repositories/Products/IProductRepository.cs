@@ -8,4 +8,7 @@ public interface IProductRepository : IRepository<Product, ProductFilter>
         DateTime toDate, CancellationToken cancellationToken = default);
 
     Task<Product?> GetOwnedProductAsync(int id, string userName, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Product>> GetStorageProductsAsync(int storageId, string userName,
+        CancellationToken cancellationToken = default);
 }

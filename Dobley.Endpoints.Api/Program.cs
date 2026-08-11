@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using Dobley.Data.Core;
 using Dobley.Data.Core.Context;
 using Dobley.Domain.Core.Entities.Notifications;
+using Dobley.Domain.Core.Entities.Products;
 using Dobley.Domain.Core.Forms;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Notifications;
@@ -26,6 +29,10 @@ const string STORAGE_NOT_FOUND_MESSAGE =
     "Хранилище не найдено или не принадлежит текущему пользователю.";
 
 var isLocal = builder.Configuration.GetValue<bool>("ASPNET_LOCAL");
+const string PRODUCT_DICTIONARIES_CACHE_POLICY = "ProductDictionaries";
+
+var productCategories = GetProductDictionary<Category>();
+var productUnitTypes = GetProductDictionary<UnitType>();
 
 builder.Host.ConfigureAppServices(isLocal);
 
@@ -65,6 +72,8 @@ AddApiExceptionHandling(builder.Services);
 
 builder.Services
     .AddAuthorization()
+    .AddOutputCache(options => options.AddPolicy(PRODUCT_DICTIONARIES_CACHE_POLICY,
+        policy => policy.Expire(TimeSpan.FromHours(24))))
     .ConfigureHttpJsonOptions(options => DependencyInjection.AddDefaultJsonConverters(options.SerializerOptions))
     .Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true)
     .AddCoreServices()
@@ -78,6 +87,7 @@ await app.Services.SeedDevelopmentDataAsync();
 
 app.UseDobleyRequestLogging();
 app.UseExceptionHandler();
+app.UseOutputCache();
 
 if (isLocal)
 {
@@ -99,6 +109,24 @@ app.MapGet("/health", async ([FromServices] DobleyContext db, [FromServices] IDi
         ? Results.Ok(new HealthResponse("Healthy", databaseAvailable, cacheAvailable))
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable);
 });
+
+var productDictionariesApi = app.MapGroup("/products");
+
+productDictionariesApi.MapGet("/categories", (HttpContext httpContext) =>
+    {
+        SetProductDictionaryCacheHeaders(httpContext);
+
+        return Results.Ok(productCategories);
+    })
+    .CacheOutput(PRODUCT_DICTIONARIES_CACHE_POLICY);
+
+productDictionariesApi.MapGet("/unit-types", (HttpContext httpContext) =>
+    {
+        SetProductDictionaryCacheHeaders(httpContext);
+
+        return Results.Ok(productUnitTypes);
+    })
+    .CacheOutput(PRODUCT_DICTIONARIES_CACHE_POLICY);
 
 var productsApi = app.MapGroup("/products").RequireAuthorization();
 
@@ -265,12 +293,57 @@ notificationsApi.MapDelete("/recipients/{recipientId}/subscriptions", async (int
     return Results.NoContent();
 });
 
+notificationsApi.MapDelete("/recipients/{recipientId}", async (int recipientId, ClaimsPrincipal user,
+    [FromServices] INotificationRecipientRepository notificationRecipientRepository,
+    [FromServices] IStorageNotificationSubscriptionRepository storageNotificationSubscriptionRepository,
+    [FromServices] ICommonRepository commonRepository, CancellationToken cancellationToken) =>
+{
+    var userName = GetCurrentUserName(user);
+    var recipient = await notificationRecipientRepository.GetForUserAsync(recipientId, userName, cancellationToken);
+    if (recipient == null)
+    {
+        return Results.NotFound();
+    }
+
+    var now = DateTime.UtcNow;
+    var subscriptions = await storageNotificationSubscriptionRepository.GetForRecipientAsync(recipientId,
+        cancellationToken);
+    foreach (var subscription in subscriptions)
+    {
+        subscription.Delete(now);
+    }
+
+    recipient.Delete(now);
+    await commonRepository.SaveChangesAsync(cancellationToken);
+
+    return Results.NoContent();
+});
+
 app.Run();
 
 static string GetCurrentUserName(ClaimsPrincipal user)
     => user.FindFirstValue(ClaimTypes.Name)
        ?? user.FindFirstValue(ClaimTypes.NameIdentifier)
        ?? throw new UnauthorizedAccessException("User name claim is required.");
+
+static IReadOnlyList<ProductDictionaryItemResponse> GetProductDictionary<TEnum>()
+    where TEnum : struct, Enum
+    => Enum.GetValues<TEnum>()
+        .Select(value => new ProductDictionaryItemResponse(value.ToString(), GetDisplayName(value)))
+        .ToArray();
+
+static void SetProductDictionaryCacheHeaders(HttpContext httpContext)
+{
+    httpContext.Response.Headers.CacheControl = "public, max-age=86400";
+}
+
+static string GetDisplayName<TEnum>(TEnum value)
+    where TEnum : struct, Enum
+{
+    var member = typeof(TEnum).GetMember(value.ToString()).FirstOrDefault();
+
+    return member?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? value.ToString();
+}
 
 static async Task<bool> CheckCache(IDistributedCache cache, CancellationToken cancellationToken)
 {

@@ -34,6 +34,11 @@ public class ProductRepository(DobleyContext context)
     public Task<Product?> GetOwnedProductAsync(int id, string userName, CancellationToken cancellationToken = default)
         => FilterEntities(new ProductFilter(id).SetUserNames([userName])).FirstOrDefaultAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Product>> GetStorageProductsAsync(int storageId, string userName,
+        CancellationToken cancellationToken = default)
+        => await FilterEntities(new ProductFilter().SetStorageIds([storageId]).SetUserNames([userName]))
+            .ToListAsync(cancellationToken);
+
     private IQueryable<Product> FilterEntities(ProductFilter? filter)
     {
         var products = Context.Products.Include(x => x.DomainStorage).AsQueryable();
@@ -51,6 +56,11 @@ public class ProductRepository(DobleyContext context)
         if (filter.Names is { Count: > 0 })
         {
             products = products.Where(x => filter.Names.Contains(x.Name));
+        }
+
+        if (filter.StorageIds is { Count: > 0 })
+        {
+            products = products.Where(x => filter.StorageIds.Contains(x.StorageId));
         }
 
         if (filter.UserNames is { Count: > 0 })

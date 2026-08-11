@@ -1,8 +1,8 @@
 :root {
     color-scheme: light;
-    --bg: #f3f5f1;
+    --bg: #f4f6f4;
     --surface: #ffffff;
-    --surface-muted: #eef2ea;
+    --surface-muted: #f0f3ee;
     --text: #1d211c;
     --muted: #66705f;
     --border: #d9dfd3;
@@ -41,10 +41,16 @@ button {
     color: #fff;
     cursor: pointer;
     white-space: nowrap;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
 button:hover {
     background: var(--accent-strong);
+}
+
+button:focus-visible {
+    outline: 3px solid rgba(23, 107, 91, 0.24);
+    outline-offset: 2px;
 }
 
 button:disabled {
@@ -100,14 +106,18 @@ textarea:focus {
 
 .app-shell {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-columns: 340px minmax(0, 1fr);
     min-height: 100vh;
 }
 
 .sidebar {
+    position: sticky;
+    top: 0;
     display: grid;
     align-content: start;
     gap: 14px;
+    height: 100vh;
+    overflow: auto;
     border-right: 1px solid var(--border);
     background: #f8faf6;
     padding: 22px;
@@ -121,7 +131,7 @@ textarea:focus {
 }
 
 .brand-block h1 {
-    font-size: 28px;
+    font-size: 26px;
     line-height: 1.08;
 }
 
@@ -146,6 +156,21 @@ textarea:focus {
     display: grid;
     gap: 12px;
     padding: 14px;
+}
+
+.auth-fields {
+    display: grid;
+    gap: 12px;
+}
+
+.auth-online-summary {
+    border: 1px solid #cfe7da;
+    border-radius: 6px;
+    background: #effaf4;
+    color: var(--accent-strong);
+    padding: 10px 11px;
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .panel-title,
@@ -191,21 +216,51 @@ textarea:focus {
 
 .workspace {
     min-width: 0;
-    padding: 22px;
+    padding: 26px;
 }
 
 .topbar {
-    margin-bottom: 18px;
+    margin: 0 auto 18px;
+    max-width: 1180px;
 }
 
 .topbar h2 {
     font-size: 26px;
 }
 
-.grid-layout {
+.tabs {
+    display: flex;
+    gap: 8px;
+    max-width: 1180px;
+    margin: 0 auto 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 4px;
+}
+
+.tab-button {
+    flex: 1 1 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+}
+
+.tab-button.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
+.tabs-layout {
     display: grid;
-    grid-template-columns: minmax(340px, 0.9fr) minmax(460px, 1.4fr);
     gap: 18px;
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.hidden {
+    display: none !important;
 }
 
 .section-block {
@@ -228,16 +283,45 @@ textarea:focus {
     font-size: 13px;
 }
 
-.editor-form {
+.tab-content-grid {
     display: grid;
-    gap: 12px;
-    border-bottom: 1px solid var(--border);
+    grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+    min-height: 0;
+}
+
+.product-grid {
+    grid-template-columns: minmax(360px, 520px) minmax(0, 1fr);
+}
+
+.editor-column {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    min-width: 0;
+    border-right: 1px solid var(--border);
     padding: 16px;
 }
 
+.tab-content-grid > .editor-form {
+    min-width: 0;
+    border-right: 1px solid var(--border);
+    padding: 16px;
+}
+
+.list-column {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    background: #fbfcfa;
+}
+
+.editor-form {
+    display: grid;
+    gap: 12px;
+}
+
 .telegram-wide-button {
-    margin: 16px 16px 0;
-    width: calc(100% - 32px);
+    width: 100%;
 }
 
 .form-grid {
@@ -248,14 +332,12 @@ textarea:focus {
 
 .item-list {
     display: grid;
+    align-content: start;
     gap: 10px;
-    max-height: calc(100vh - 420px);
+    height: 100%;
+    min-height: 220px;
     overflow: auto;
     padding: 16px;
-}
-
-.products-list {
-    max-height: calc(100vh - 560px);
 }
 
 .item-card {
@@ -270,6 +352,45 @@ textarea:focus {
 .item-card.active {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(23, 107, 91, 0.12);
+}
+
+.empty-state {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    padding: 24px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.item-actions,
+.button-row {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.item-actions button {
+    min-height: 34px;
+}
+
+.button-row button {
+    flex: 1 1 160px;
+    min-width: 0;
+    white-space: normal;
+}
+
+.panel .button-row button {
+    flex-basis: 120px;
+}
+
+.topbar .secondary {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .item-main {
@@ -328,12 +449,31 @@ textarea:focus {
     display: block;
 }
 
+@media (max-width: 1400px) {
+    .tab-content-grid,
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .editor-column {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .tab-content-grid > .editor-form {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+    }
+}
+
 @media (max-width: 1100px) {
     .app-shell {
         grid-template-columns: 1fr;
     }
 
     .sidebar {
+        position: static;
+        height: auto;
         border-right: 0;
         border-bottom: 1px solid var(--border);
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -343,9 +483,6 @@ textarea:focus {
         grid-column: 1 / -1;
     }
 
-    .grid-layout {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 720px) {
@@ -354,7 +491,11 @@ textarea:focus {
         padding: 14px;
     }
 
-    .sidebar,
+    .sidebar {
+        max-height: 46vh;
+        overflow: auto;
+    }
+
     .form-grid {
         grid-template-columns: 1fr;
     }
@@ -362,15 +503,14 @@ textarea:focus {
     .topbar,
     .panel-title,
     .section-header,
-    .item-actions,
-    .button-row {
+    .item-actions {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .item-list,
-    .products-list {
-        max-height: none;
+    .button-row {
+        align-items: stretch;
+        flex-direction: column;
     }
 
     button {
