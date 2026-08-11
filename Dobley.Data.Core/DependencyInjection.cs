@@ -292,6 +292,8 @@ public static class DependencyInjection
         logging.AddFilter("Microsoft", MsLogLevel.Warning);
         logging.AddFilter("Microsoft.AspNetCore", MsLogLevel.Warning);
         logging.AddFilter("Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager", MsLogLevel.Error);
+        logging.AddFilter("Microsoft.Extensions.Http", MsLogLevel.Warning);
+        logging.AddFilter("System.Net.Http", MsLogLevel.Warning);
         logging.AddFilter("Yarp", MsLogLevel.Information);
     }
 

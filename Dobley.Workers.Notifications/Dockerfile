@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 RUN mkdir -p /app/logs /app/data-protection-keys \
     && chown -R $APP_UID /app/logs /app/data-protection-keys

@@ -41,6 +41,26 @@
     {
       "key": "productId",
       "value": "1"
+    },
+    {
+      "key": "notificationInviteId",
+      "value": ""
+    },
+    {
+      "key": "notificationInviteCode",
+      "value": ""
+    },
+    {
+      "key": "notificationRecipientId",
+      "value": ""
+    },
+    {
+      "key": "notificationExpiresAt",
+      "value": "2026-12-31T23:59:59Z"
+    },
+    {
+      "key": "notifyBeforeDays",
+      "value": "3"
     }
   ],
   "item": [
@@ -431,7 +451,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Хлеб\",\n  \"description\": \"Добротный хлеб\",\n  \"price\": 78.00,\n  \"category\": \"Bakery\",\n  \"unit\": 1,\n  \"unitType\": \"Pieces\",\n  \"barcode\": \"75623\",\n  \"storageId\": {{storageId}}\n}"
+              "raw": "{\n  \"name\": \"Хлеб\",\n  \"description\": \"Добротный хлеб\",\n  \"price\": 78,\n  \"category\": \"Bakery\",\n  \"unit\": 1,\n  \"unitType\": \"Pieces\",\n  \"barcode\": \"75623\",\n  \"expirationDate\": \"2026-08-14T00:00:00Z\",\n  \"storageId\": {{storageId}}\n}"
             },
             "url": "{{baseUrl}}/api/products/create"
           }
@@ -494,7 +514,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Хлеб обновленный\",\n  \"description\": \"Добротный хлеб, обновлено\",\n  \"price\": 82.00,\n  \"category\": \"Bakery\",\n  \"unit\": 2,\n  \"unitType\": \"Pieces\",\n  \"barcode\": \"75623\",\n  \"storageId\": {{storageId}}\n}"
+              "raw": "{\n  \"name\": \"Хлеб обновленный\",\n  \"description\": \"Добротный хлеб, обновлено\",\n  \"price\": 82,\n  \"category\": \"Bakery\",\n  \"unit\": 2,\n  \"unitType\": \"Pieces\",\n  \"barcode\": \"75623\",\n  \"expirationDate\": \"2026-08-15T00:00:00Z\",\n  \"storageId\": {{storageId}}\n}"
             },
             "url": "{{baseUrl}}/api/products/{{productId}}"
           }
@@ -514,6 +534,109 @@
               }
             ],
             "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Create Invite",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('notificationInviteId', json.id);",
+                  "  pm.collectionVariables.set('notificationInviteCode', json.code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Connection",
+                "value": "close"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiresAt\": \"{{notificationExpiresAt}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/notifications/invites/create"
+          }
+        },
+        {
+          "name": "Get Recipients",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (Array.isArray(json) && json.length > 0) {",
+                  "    pm.collectionVariables.set('notificationRecipientId', json[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Connection",
+                "value": "close"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/recipients"
+          }
+        },
+        {
+          "name": "Subscribe Recipient To Storage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Connection",
+                "value": "close"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storageIds\": [\n    {{storageId}}\n  ],\n  \"notifyBeforeDays\": {{notifyBeforeDays}}\n}"
+            },
+            "url": "{{baseUrl}}/api/notifications/recipients/{{notificationRecipientId}}/subscriptions"
           }
         }
       ]

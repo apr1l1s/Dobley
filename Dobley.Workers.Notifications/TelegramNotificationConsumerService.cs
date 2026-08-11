@@ -6,8 +6,7 @@ using RabbitMQ.Client.Events;
 
 namespace Dobley.Workers.Notifications;
 
-public class TelegramNotificationConsumerService(
-    RabbitMqOptions rabbitMqOptions,
+public class TelegramNotificationConsumerService(RabbitMqOptions rabbitMqOptions,
     IHttpClientFactory httpClientFactory,
     ILogger<TelegramNotificationConsumerService> logger)
     : BackgroundService
