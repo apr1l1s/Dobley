@@ -177,7 +177,8 @@ notificationsApi.MapPost("/invites/create", async ([FromBody] CreateNotification
     [FromServices] ICommonRepository commonRepository, CancellationToken cancellationToken) =>
 {
     var expiresAt = request?.ExpiresAt ?? DateTime.UtcNow.AddDays(1);
-    var invite = NotificationInvite.Create(GetCurrentUserName(user), CreateNotificationInviteCode(), expiresAt);
+    var invite = NotificationInvite.Create(GetCurrentUserName(user), NotificationInviteCodeGenerator.Create(),
+        expiresAt);
 
     await notificationInviteRepository.AddAsync(invite, cancellationToken);
     await commonRepository.SaveChangesAsync(cancellationToken);
@@ -240,13 +241,6 @@ static string GetCurrentUserName(ClaimsPrincipal user)
     => user.FindFirstValue(ClaimTypes.Name)
        ?? user.FindFirstValue(ClaimTypes.NameIdentifier)
        ?? throw new UnauthorizedAccessException("User name claim is required.");
-
-static string CreateNotificationInviteCode()
-    => Convert.ToBase64String(Guid.NewGuid().ToByteArray())
-        .Replace("+", string.Empty)
-        .Replace("/", string.Empty)
-        .Replace("=", string.Empty)
-        .ToUpperInvariant()[..12];
 
 static async Task<bool> CheckCache(IDistributedCache cache, CancellationToken cancellationToken)
 {

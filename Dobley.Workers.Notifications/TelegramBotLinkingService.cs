@@ -62,16 +62,48 @@ public class TelegramBotLinkingService(
                 continue;
             }
 
-            var code = ParseStartCode(text);
-            if (string.IsNullOrWhiteSpace(code))
+            if (TryGetStartCode(text, out var code))
             {
-                await SendMessage(botToken, chatId, "Для подключения используется команда /start <код>.",
+                await LinkRecipient(botToken, chatId, update.Message!.Chat.CreateDisplayName(), code,
                     cancellationToken);
                 continue;
             }
 
-            await LinkRecipient(botToken, chatId, update.Message!.Chat.CreateDisplayName(), code, cancellationToken);
+            if (IsCommand(text, "/invite"))
+            {
+                await CreateInvite(botToken, chatId, cancellationToken);
+                continue;
+            }
+
+            await SendMessage(botToken, chatId, CreateHelpMessage(), cancellationToken);
         }
+    }
+
+    private async Task CreateInvite(string botToken, string chatId, CancellationToken cancellationToken)
+    {
+        using var scope = services.CreateScope();
+        var commonRepository = scope.ServiceProvider.GetRequiredService<ICommonRepository>();
+        var inviteRepository = scope.ServiceProvider.GetRequiredService<INotificationInviteRepository>();
+        var recipientRepository = scope.ServiceProvider.GetRequiredService<INotificationRecipientRepository>();
+
+        var recipient = await recipientRepository.GetByChannelAndExternalIdAsync(NotificationChannel.Telegram, chatId,
+            cancellationToken);
+
+        if (recipient == null)
+        {
+            await SendMessage(botToken, chatId, "Сначала подключи Telegram командой /start <код>.", cancellationToken);
+            return;
+        }
+
+        var invite = NotificationInvite.Create(recipient.UserName, NotificationInviteCodeGenerator.Create(),
+            DateTime.UtcNow.AddDays(1));
+
+        await inviteRepository.AddAsync(invite, cancellationToken);
+        await commonRepository.SaveChangesAsync(cancellationToken);
+
+        await SendMessage(botToken, chatId,
+            $"Код приглашения: {invite.Code}\nДействует до {invite.ExpiresAt:dd.MM.yyyy HH:mm} UTC.\nОтправь его человеку, он подключится командой /start {invite.Code}.",
+            cancellationToken);
     }
 
     private async Task LinkRecipient(string botToken, string chatId, string? displayName, string code,
@@ -90,7 +122,7 @@ public class TelegramBotLinkingService(
 
         if (invite == null || !invite.CanBeUsed(now))
         {
-            await SendMessage(botToken, chatId, "Код подключения не найден или уже истёк.", cancellationToken);
+            await SendMessage(botToken, chatId, "Код подключения не найден или уже истек.", cancellationToken);
             return;
         }
 
@@ -106,7 +138,7 @@ public class TelegramBotLinkingService(
         }
         else if (recipient.UserName != invite.UserName)
         {
-            await SendMessage(botToken, chatId, "Этот Telegram-аккаунт уже подключён к другому профилю.",
+            await SendMessage(botToken, chatId, "Этот Telegram-аккаунт уже подключен к другому профилю.",
                 cancellationToken);
             return;
         }
@@ -133,14 +165,6 @@ public class TelegramBotLinkingService(
         await SendMessage(botToken, chatId, "Готово, уведомления по хранилищам подключены.", cancellationToken);
     }
 
-    private static string? ParseStartCode(string text)
-    {
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return parts.Length == 2 && parts[0].Equals("/start", StringComparison.OrdinalIgnoreCase)
-            ? parts[1].ToUpperInvariant()
-            : null;
-    }
-
     private async Task SendMessage(string botToken, string chatId, string text, CancellationToken cancellationToken)
     {
         var httpClient = httpClientFactory.CreateClient();
@@ -156,10 +180,32 @@ public class TelegramBotLinkingService(
         response.EnsureSuccessStatusCode();
     }
 
+    private static string CreateHelpMessage()
+        => "Команды бота:\n/start <код> - подключить Telegram к профилю.\n/invite - создать новый код приглашения для этого профиля.\n/help - показать команды.";
+
     private static int GetDefaultNotifyBeforeDays()
         => int.TryParse(Environment.GetEnvironmentVariable("DEFAULT_NOTIFY_BEFORE_DAYS"), out var days)
             ? days
             : 3;
+
+    private static bool IsCommand(string text, string command)
+    {
+        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length == 1 && parts[0].Equals(command, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetStartCode(string text, out string code)
+    {
+        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 2 && parts[0].Equals("/start", StringComparison.OrdinalIgnoreCase))
+        {
+            code = parts[1].ToUpperInvariant();
+            return true;
+        }
+
+        code = string.Empty;
+        return false;
+    }
 }
 
 public record TelegramUpdatesResponse([property: JsonPropertyName("result")] IReadOnlyList<TelegramUpdate> Result);

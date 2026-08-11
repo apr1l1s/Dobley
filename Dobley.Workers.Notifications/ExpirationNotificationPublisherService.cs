@@ -77,7 +77,7 @@ public class ExpirationNotificationPublisherService(
                 }
 
                 Publish(new TelegramNotificationMessage(recipient.ExternalId, CreateMessage(product.Name,
-                    product.DomainStorage?.Name ?? subscription.DomainStorage?.Name ?? "хранилище",
+                    product.DomainStorage?.Name ?? subscription.DomainStorage?.Name ?? "Хранилище",
                     product.ExpirationDate.Value, daysLeft)));
             }
         }
@@ -109,9 +109,10 @@ public class ExpirationNotificationPublisherService(
     }
 
     private static string CreateMessage(string productName, string storageName, DateTime expirationDate, int daysLeft)
-        => daysLeft == 0
-            ? $"Братан, у продукта \"{productName}\" сегодня заканчивается срок годности. Хранилище: {storageName}."
-            : $"Братан, у продукта \"{productName}\" скоро закончится срок годности. Хранилище: {storageName}. Дата: {expirationDate:dd.MM.yyyy}. Осталось дней: {daysLeft}.";
+        => $"Братан, у продукта \"{productName}\" скоро закончится срок годности.\n"
+           + $"Хранилище: {storageName}.\n"
+           + $"Дата: {expirationDate:dd.MM.yyyy}.\n"
+           + $"Осталось дней: {daysLeft}.";
 
     private static TimeSpan GetInterval()
         => int.TryParse(Environment.GetEnvironmentVariable("EXPIRATION_WATCH_INTERVAL_SECONDS"), out var seconds)
