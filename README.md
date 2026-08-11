@@ -8,10 +8,13 @@ Dobley представляет собой backend-систему на .NET дл
 Dobley.Endpoints.Api       API продуктов и хранилищ, JWT-авторизация, Swagger
 Dobley.Endpoints.Auth      Регистрация, вход, refresh-токены, выпуск JWT, Swagger
 Dobley.Endpoints.Gateway   YARP gateway для маршрутизации запросов к Auth и API
+Dobley.Endpoints.Ui        Веб-интерфейс для работы с хранилищами, продуктами и Telegram-подпиской
+Dobley.Workers.Notifications Worker уведомлений о сроках годности и Telegram-интеграции
 Dobley.Domain.Core         Сущности, валидация, формы, use cases, контракты репозиториев
 Dobley.Data.Core           EF Core DbContext, репозитории, миграции, dependency injection
 Dobley.Domain.Core.Tests   Тесты доменной валидации и opt-in smoke-тесты gateway
-compose.yaml               Локальное окружение Gateway/API/Auth/Postgres/Redis/Elastic/Grafana
+observability              Конфигурация OpenTelemetry Collector, datasource и Grafana dashboard
+compose.yaml               Локальное окружение Gateway/API/Auth/UI/Worker/Postgres/Redis/RabbitMQ/Elastic/Grafana
 ```
 
 ## Структура базы данных
@@ -106,6 +109,7 @@ docker compose up --build
 ```text
 Gateway: http://localhost:5000
 Gateway health: http://localhost:5000/health
+UI: http://localhost:5000/ui/
 Postgres: localhost:5432
 Redis: localhost:6379
 RabbitMQ: localhost:5672
@@ -116,11 +120,14 @@ Elasticsearch: http://localhost:9200
 
 Auth и Product API являются внутренними Docker-сервисами. Клиентские запросы направляются через gateway.
 
+Веб-интерфейс по адресу `http://localhost:5000/ui/` поддерживает регистрацию нового пользователя и вход в существующую учетную запись. После регистрации пользователь может сразу создавать хранилища, продукты и подключать Telegram-рассылку.
+
 Маршруты gateway:
 
 ```text
 /auth/* -> Dobley.Endpoints.Auth
 /api/*  -> Dobley.Endpoints.Api
+/ui/*   -> Dobley.Endpoints.Ui
 ```
 
 ## Демонстрационный сценарий
@@ -242,6 +249,8 @@ Products:
 
 ```text
 GET /api/products
+GET /api/products/categories
+GET /api/products/unit-types
 GET /api/products/{id}
 PUT /api/products/{id}
 DELETE /api/products/{id}
@@ -253,7 +262,9 @@ Notifications:
 ```text
 POST /api/notifications/invites/create
 GET /api/notifications/recipients
+DELETE /api/notifications/recipients/{recipientId}
 POST /api/notifications/recipients/{recipientId}/subscriptions
+DELETE /api/notifications/recipients/{recipientId}/subscriptions
 ```
 
 Методы продуктов и хранилищ возвращают и изменяют только данные, принадлежащие текущему JWT-пользователю.
@@ -306,6 +317,7 @@ RABBITMQ_USER               пользователь RabbitMQ
 RABBITMQ_PASSWORD           пароль RabbitMQ
 RABBITMQ_NOTIFICATION_QUEUE очередь уведомлений о сроке годности
 TELEGRAM_BOT_TOKEN          токен Telegram Bot API; хранится только в локальном .env
+TELEGRAM_BOT_USERNAME       username Telegram-бота для UI-ссылки подписки; значение по умолчанию dobley_dev_bot
 DEFAULT_NOTIFY_BEFORE_DAYS  количество дней до уведомления при подписке через bot invite
 EXPIRATION_WATCH_INTERVAL_SECONDS интервал проверки сроков годности worker-сервисом
 SEED_DEV_DATA               включение локальных демо-данных
@@ -324,6 +336,8 @@ LOG_FILE_PATH               путь к базовому локальному fa
 UI логов: Grafana на http://localhost:3000
 Локальный fallback: NLog пишет daily log files в Docker volumes для каждого сервиса
 Gateway/API/Auth request logs: method, path, status code, elapsed time, trace id
+UI request logs: выдача веб-интерфейса, config.js и health endpoint
+Notifications logs: watcher сроков годности, RabbitMQ-публикация и Telegram-отправка
 Auth logs: регистрация, вход, refresh rotation, logout без паролей и токенов
 API exception logs: предупреждения доменной валидации и необработанные ошибки
 ```
@@ -335,7 +349,10 @@ URL: http://localhost:3000
 Локальный логин по умолчанию: admin
 Локальный пароль по умолчанию: admin
 Dashboard: Dobley Observability
-Service filter: "*" отображает Gateway, API и Auth вместе
+UI dashboard: Dobley UI
+Database dashboard: Dobley Database
+Service filter: "*" отображает Gateway, API, Auth, UI и Notifications вместе
+Dashboard links: Gateway health, UI, Database dashboard, UI dashboard и Elasticsearch
 Search filter: по умолчанию "Body:*"; примеры: Body:"products", Attributes.Path:"/api/products/"
 Refresh: 5 секунд; Elasticsearch может отображать логи с задержкой в несколько секунд
 ```
@@ -353,23 +370,54 @@ Raw Documents
 
 Локальные fallback logs сохраняются в Docker volumes через NLog как daily files, например `/app/logs/api-2026-08-11.log`.
 
-## ����������� � ����� ��������
-
-��� ����������� ������������ ����������� ������ �����������. � ���� ��� ������ � ��������� Telegram: Telegram �������� ��������� ������ `NotificationChannel`, � ������� ������������� �������� � `NotificationRecipients.ExternalId`.
-
-�������� �����������:
+Dashboard `Dobley Database` использует PostgreSQL datasource и показывает:
 
 ```text
-1. ������������ Dobley ������ ��� ����������� ����� POST /api/notifications/invites/create.
-2. ������� ��������� Telegram-���� � ���������� /start <code>.
-3. Worker ������ NotificationRecipient � Channel=Telegram � ExternalId=chatId.
-4. ���������� ������������� ������������� �� ������� ��������� ������������.
-5. Expiration watcher ���� �������� � ExpirationDate � �������� NotifyBeforeDays.
-6. Worker ��������� ��������� � RabbitMQ.
-7. Telegram consumer ������ ������� � ���������� ��������� ����� Telegram Bot API.
+Количество пользователей, хранилищ и продуктов
+Продукты со сроком годности в ближайшие 3 дня
+Активные Telegram-чаты и включенные подписки
+Размер базы данных и количество подключений
+CPU, память и файловая система Postgres-контейнера
+Cache hit ratio, активные запросы, ожидания и locks
+Количество живых строк по доменным таблицам
+Список продуктов со сроком годности
+Динамику добавления продуктов и хранилищ
+Размеры таблиц и оценку live/dead rows
 ```
 
-������ �������� �������� �� ������ ��������:
+## Уведомления о сроке годности
+
+Для уведомлений используется нейтральная модель получателей. В базе нет таблиц с названием Telegram: Telegram является значением канала `NotificationChannel`, а внешний идентификатор хранится в `NotificationRecipients.ExternalId`.
+
+Один и тот же внешний чат может быть подключен к нескольким пользователям Dobley. Уникальность получателя задаётся связкой `UserName + Channel + ExternalId`, поэтому выключенная рассылка у одного пользователя не блокирует подключение этого же чата к другому пользователю. Если Telegram-команда без кода неоднозначна для нескольких профилей, бот просит выбрать профиль через новый код подключения.
+
+Команда `/unsub` только выключает рассылку и оставляет чат подключенным к профилю. Для полного отключения используется `/unlink`: бот мягко удаляет получателя и его подписки. Если чат подключен к нескольким профилям, используется `/unlink <код>`, где код создаётся в UI нужного профиля.
+
+Сценарий подключения:
+
+```text
+1. Пользователь Dobley создаёт код подключения через POST /api/notifications/invites/create.
+2. Человек открывает Telegram-бота и отправляет /start <code>.
+3. Worker создаёт NotificationRecipient с Channel=Telegram и ExternalId=chatId.
+4. Получатель автоматически подписывается на текущие хранилища пользователя.
+5. Expiration watcher ищет продукты с ExpirationDate в пределах NotifyBeforeDays.
+6. Worker публикует сообщение в RabbitMQ.
+7. Telegram consumer читает очередь и отправляет сообщение через Telegram Bot API.
+```
+
+Команды Telegram-бота:
+
+```text
+/start <код>  подключить Telegram-чат к профилю
+/invite       создать код приглашения для текущего профиля
+/sub          включить рассылку уведомлений
+/unsub        выключить рассылку, не отвязывая чат
+/unlink       отвязать чат от профиля
+/unlink <код> отвязать чат от конкретного профиля
+/help         показать команды
+```
+
+Пример создания продукта со сроком годности:
 
 ```json
 {

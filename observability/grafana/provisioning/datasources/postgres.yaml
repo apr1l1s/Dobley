@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: Dobley Postgres
+    uid: dobley-postgres
+    type: postgres
+    access: proxy
+    url: dobley.postgres:5432
+    database: postgres
+    user: ${DB_USER}
+    secureJsonData:
+      password: ${DB_PASSWORD}
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false

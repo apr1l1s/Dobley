@@ -28,63 +28,27 @@
   "links": [
     {
       "asDropdown": false,
-      "icon": "dashboard",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Database Dashboard",
-      "tooltip": "Open Dobley Database dashboard",
-      "type": "link",
-      "url": "/d/dobley-database/dobley-database"
-    },
-    {
-      "asDropdown": false,
-      "icon": "dashboard",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "UI Dashboard",
-      "tooltip": "Open Dobley UI dashboard",
-      "type": "link",
-      "url": "/d/dobley-ui/dobley-ui"
-    },
-    {
-      "asDropdown": false,
       "icon": "external link",
       "includeVars": false,
       "keepTime": false,
       "tags": [],
       "targetBlank": true,
-      "title": "Gateway",
-      "tooltip": "Open gateway health endpoint",
-      "type": "link",
-      "url": "http://127.0.0.1:5000/health"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": false,
-      "tags": [],
-      "targetBlank": true,
-      "title": "UI",
+      "title": "Open UI",
       "tooltip": "Open Dobley UI",
       "type": "link",
       "url": "http://127.0.0.1:5000/ui/"
     },
     {
       "asDropdown": false,
-      "icon": "external link",
+      "icon": "dashboard",
       "includeVars": false,
-      "keepTime": false,
+      "keepTime": true,
       "tags": [],
-      "targetBlank": true,
-      "title": "Elasticsearch",
-      "tooltip": "Open Elasticsearch",
-      "type": "link",
-      "url": "http://127.0.0.1:9200"
+      "targetBlank": false,
+      "title": "Overview",
+      "tooltip": "Open Dobley Observability",
+      "type": "dashboards",
+      "url": ""
     }
   ],
   "liveNow": false,
@@ -139,7 +103,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "alias": "Logs",
+          "alias": "UI Requests",
           "bucketAggs": [
             {
               "field": "@timestamp",
@@ -161,12 +125,12 @@
               "type": "count"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND Attributes.Path:* AND NOT Attributes.Path:\"/health\"",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Logs",
+      "title": "UI Requests",
       "type": "stat"
     },
     {
@@ -227,7 +191,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "alias": "Warnings",
+          "alias": "UI Errors",
           "bucketAggs": [
             {
               "field": "@timestamp",
@@ -249,12 +213,12 @@
               "type": "count"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND SeverityText:Warning AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND (SeverityText:Error OR Attributes.StatusCode:[400 TO 599]) AND NOT Attributes.Path:\"/health\"",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Warnings",
+      "title": "UI Errors",
       "type": "stat"
     },
     {
@@ -274,10 +238,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
               }
             ]
           },
@@ -311,7 +271,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "alias": "Errors",
+          "alias": "Static Assets",
           "bucketAggs": [
             {
               "field": "@timestamp",
@@ -333,12 +293,12 @@
               "type": "count"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND (SeverityText:Error OR Attributes.StatusCode:[500 TO 599]) AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND (Attributes.Path:\"/app.js\" OR Attributes.Path:\"/styles.css\" OR Attributes.Path:\"/config.js\")",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Errors / 5xx",
+      "title": "Static Assets",
       "type": "stat"
     },
     {
@@ -358,14 +318,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 10
               }
             ]
           },
@@ -399,7 +351,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "alias": "Bad Requests",
+          "alias": "Config Requests",
           "bucketAggs": [
             {
               "field": "@timestamp",
@@ -421,12 +373,12 @@
               "type": "count"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND Attributes.StatusCode:[400 TO 499] AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND Attributes.Path:\"/config.js\"",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "4xx",
+      "title": "Config Requests",
       "type": "stat"
     },
     {
@@ -436,52 +388,16 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
+            "fillOpacity": 18,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
+            "lineWidth": 1,
+            "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "spanNulls": false
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -495,12 +411,10 @@
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull",
-            "max"
+            "sum"
           ],
           "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "placement": "bottom"
         },
         "tooltip": {
           "mode": "multi",
@@ -510,10 +424,10 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "alias": "{{term Resource.service.name.keyword}}",
+          "alias": "UI Requests",
           "bucketAggs": [
             {
-              "field": "Resource.service.name.keyword",
+              "field": "Attributes.Path.keyword",
               "id": "3",
               "settings": {
                 "min_doc_count": 1,
@@ -543,12 +457,12 @@
               "type": "count"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND Attributes.Path:* AND NOT Attributes.Path:\"/health\"",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Log Rate By Service",
+      "title": "UI Requests By Path",
       "type": "timeseries"
     },
     {
@@ -558,50 +472,14 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 35,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
+            "drawStyle": "line",
+            "fillOpacity": 18,
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
+            "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+            "spanNulls": false
           },
           "unit": "short"
         },
@@ -617,12 +495,10 @@
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull",
             "sum"
           ],
           "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "placement": "bottom"
         },
         "tooltip": {
           "mode": "multi",
@@ -632,7 +508,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "alias": "{{term Attributes.StatusCode}}",
+          "alias": "UI Statuses",
           "bucketAggs": [
             {
               "field": "Attributes.StatusCode",
@@ -665,12 +541,12 @@
               "type": "count"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND Attributes.StatusCode:* AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND Attributes.StatusCode:* AND NOT Attributes.Path:\"/health\"",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "HTTP Statuses",
+      "title": "UI Status Codes",
       "type": "timeseries"
     },
     {
@@ -698,7 +574,6 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "bucketAggs": [],
           "datasource": {
             "type": "elasticsearch",
             "uid": "dobley-elasticsearch"
@@ -709,12 +584,12 @@
               "type": "logs"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND (${logSearch:raw}) AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND (${uiSearch:raw})",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Recent Logs",
+      "title": "Recent UI Logs",
       "type": "logs"
     },
     {
@@ -742,7 +617,6 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "bucketAggs": [],
           "datasource": {
             "type": "elasticsearch",
             "uid": "dobley-elasticsearch"
@@ -753,18 +627,31 @@
               "type": "logs"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND (SeverityText:Warning OR SeverityText:Error OR Attributes.StatusCode:[400 TO 599]) AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND (SeverityText:Warning OR SeverityText:Error OR Attributes.StatusCode:[400 TO 599])",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Warnings, Errors, 4xx, 5xx",
+      "title": "UI Warnings And Errors",
       "type": "logs"
     },
     {
       "datasource": {
         "type": "elasticsearch",
         "uid": "dobley-elasticsearch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": []
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -788,7 +675,6 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "bucketAggs": [],
           "datasource": {
             "type": "elasticsearch",
             "uid": "dobley-elasticsearch"
@@ -799,39 +685,12 @@
               "type": "raw_document"
             }
           ],
-          "query": "Resource.service.name.keyword:${serviceName:raw} AND Attributes.Path:* AND NOT Attributes.Path:\"/health\"",
+          "query": "Resource.service.name.keyword:\"Dobley.Endpoints.Ui\" AND Attributes.Path:*",
           "refId": "A",
           "timeField": "@timestamp"
         }
       ],
-      "title": "Raw Documents",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "includeByName": {
-              "@timestamp": true,
-              "Attributes.ElapsedMilliseconds": true,
-              "Attributes.Method": true,
-              "Attributes.Path": true,
-              "Attributes.StatusCode": true,
-              "Body": true,
-              "Resource.service.name": true,
-              "SeverityText": true,
-              "TraceId": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "Attributes.ElapsedMilliseconds": "elapsed_ms",
-              "Attributes.Method": "method",
-              "Attributes.Path": "path",
-              "Attributes.StatusCode": "status",
-              "Resource.service.name": "service"
-            }
-          }
-        }
-      ],
+      "title": "Raw UI Documents",
       "type": "table"
     }
   ],
@@ -839,57 +698,10 @@
   "schemaVersion": 40,
   "tags": [
     "dobley",
-    "logs",
-    "elasticsearch"
+    "ui"
   ],
   "templating": {
     "list": [
-      {
-        "current": {
-          "selected": true,
-          "text": "*",
-          "value": "*"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Service",
-        "name": "serviceName",
-        "options": [
-          {
-            "selected": true,
-            "text": "*",
-            "value": "*"
-          },
-          {
-            "selected": false,
-            "text": "Gateway",
-            "value": "\"Dobley.Endpoints.Gateway\""
-          },
-          {
-            "selected": false,
-            "text": "API",
-            "value": "\"Dobley.Endpoints.Api\""
-          },
-          {
-            "selected": false,
-            "text": "Auth",
-            "value": "\"Dobley.Endpoints.Auth\""
-          },
-          {
-            "selected": false,
-            "text": "UI",
-            "value": "\"Dobley.Endpoints.Ui\""
-          },
-          {
-            "selected": false,
-            "text": "Notifications",
-            "value": "\"Dobley.Workers.Notifications\""
-          }
-        ],
-        "query": "*,Gateway : \"Dobley.Endpoints.Gateway\",API : \"Dobley.Endpoints.Api\",Auth : \"Dobley.Endpoints.Auth\",UI : \"Dobley.Endpoints.Ui\",Notifications : \"Dobley.Workers.Notifications\"",
-        "skipUrlSync": true,
-        "type": "custom"
-      },
       {
         "current": {
           "selected": true,
@@ -898,7 +710,7 @@
         },
         "hide": 0,
         "label": "Search",
-        "name": "logSearch",
+        "name": "uiSearch",
         "options": [
           {
             "selected": true,
@@ -913,24 +725,13 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
-  "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h"
-    ]
-  },
+  "timepicker": {},
   "timezone": "browser",
-  "title": "Dobley Observability",
-  "uid": "dobley-observability",
-  "version": 2,
+  "title": "Dobley UI",
+  "uid": "dobley-ui",
+  "version": 1,
   "weekStart": ""
 }
