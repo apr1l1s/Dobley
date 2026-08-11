@@ -241,8 +241,7 @@ notificationsApi.MapPost("/recipients/{recipientId}/subscriptions", async (int r
         .Select(StorageNotificationSubscriptionResponse.Create));
 });
 
-notificationsApi.MapDelete("/recipients/{recipientId}/subscriptions/{storageId}", async (int recipientId,
-    int storageId, ClaimsPrincipal user,
+notificationsApi.MapDelete("/recipients/{recipientId}/subscriptions", async (int recipientId, ClaimsPrincipal user,
     [FromServices] INotificationRecipientRepository notificationRecipientRepository,
     [FromServices] IStorageNotificationSubscriptionRepository storageNotificationSubscriptionRepository,
     [FromServices] ICommonRepository commonRepository, CancellationToken cancellationToken) =>
@@ -254,14 +253,13 @@ notificationsApi.MapDelete("/recipients/{recipientId}/subscriptions/{storageId}"
         return Results.NotFound();
     }
 
-    var subscription = await storageNotificationSubscriptionRepository.GetForRecipientAndStorageAsync(recipientId,
-        storageId, cancellationToken);
-    if (subscription == null)
+    var subscriptions = await storageNotificationSubscriptionRepository.GetForRecipientAsync(recipientId,
+        cancellationToken);
+    foreach (var subscription in subscriptions.Where(x => x.IsEnabled))
     {
-        return Results.NotFound();
+        subscription.Disable();
     }
 
-    subscription.Disable();
     await commonRepository.SaveChangesAsync(cancellationToken);
 
     return Results.NoContent();

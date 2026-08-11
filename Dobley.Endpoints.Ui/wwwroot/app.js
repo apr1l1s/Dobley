@@ -232,9 +232,7 @@ async function deleteProduct(id) {
     showToast('Продукт удален.');
 }
 
-async function createInviteAndOpenTelegram(storageId) {
-    state.selectedStorageId = storageId;
-    localStorage.setItem('dobley.selectedStorageId', String(storageId));
+async function createInviteAndOpenTelegram() {
     const invite = await request('/api/notifications/invites/create', {
         method: 'POST',
         headers: authHeaders(true),
@@ -252,10 +250,16 @@ async function createInviteAndOpenTelegram(storageId) {
     showToast(`Код ${code} создан. Telegram открыт.`);
 }
 
-async function subscribeSelectedRecipient(storageId) {
+async function subscribeSelectedRecipient() {
     const recipientId = Number(elements.recipientSelect.value);
     if (!recipientId) {
         showToast('Сначала подключи Telegram-чат через код.');
+        return;
+    }
+
+    const storageIds = state.storages.map(storage => read(storage, 'id'));
+    if (storageIds.length === 0) {
+        showToast('Сначала создай хотя бы одно хранилище.');
         return;
     }
 
@@ -263,27 +267,27 @@ async function subscribeSelectedRecipient(storageId) {
         method: 'POST',
         headers: authHeaders(true),
         body: JSON.stringify({
-            storageIds: [storageId],
+            storageIds,
             notifyBeforeDays: 3
         })
     });
 
-    showToast('Чат подписан на хранилище.');
+    showToast('Рассылка для чата включена.');
 }
 
-async function unsubscribeSelectedRecipient(storageId) {
+async function unsubscribeSelectedRecipient() {
     const recipientId = Number(elements.recipientSelect.value);
     if (!recipientId) {
         showToast('Сначала выбери подключенный чат.');
         return;
     }
 
-    await request(`/api/notifications/recipients/${recipientId}/subscriptions/${storageId}`, {
+    await request(`/api/notifications/recipients/${recipientId}/subscriptions`, {
         method: 'DELETE',
         headers: authHeaders()
     });
 
-    showToast('Чат отписан от хранилища.');
+    showToast('Рассылка для чата выключена.');
 }
 
 function editStorage(storage) {
@@ -354,9 +358,6 @@ function renderStorages() {
             <div class="item-actions">
                 <button class="secondary" data-action="select-storage" data-id="${storageId}" type="button">Выбрать</button>
                 <button class="secondary" data-action="edit-storage" data-id="${storageId}" type="button">Изменить</button>
-                <button data-action="open-telegram" data-id="${storageId}" type="button">Подписаться</button>
-                <button class="secondary" data-action="subscribe-recipient" data-id="${storageId}" type="button">Подписать чат</button>
-                <button class="secondary" data-action="unsubscribe-recipient" data-id="${storageId}" type="button">Отписать чат</button>
                 <button class="danger" data-action="delete-storage" data-id="${storageId}" type="button">Удалить</button>
             </div>
         `;
@@ -449,6 +450,9 @@ function wireEvents() {
         localStorage.setItem('dobley.telegramBotUserName', state.telegramBotUserName);
         showToast('Telegram username сохранен.');
     });
+    byId('open-telegram-button').addEventListener('click', () => run(createInviteAndOpenTelegram));
+    byId('subscribe-recipient-button').addEventListener('click', () => run(subscribeSelectedRecipient));
+    byId('unsubscribe-recipient-button').addEventListener('click', () => run(unsubscribeSelectedRecipient));
     byId('storage-form').addEventListener('submit', event => run(() => saveStorage(event)));
     byId('product-form').addEventListener('submit', event => run(() => saveProduct(event)));
     byId('reset-storage-button').addEventListener('click', resetStorageForm);
@@ -472,15 +476,6 @@ function wireEvents() {
         }
         if (button.dataset.action === 'delete-storage') {
             await deleteStorage(id);
-        }
-        if (button.dataset.action === 'open-telegram') {
-            await createInviteAndOpenTelegram(id);
-        }
-        if (button.dataset.action === 'subscribe-recipient') {
-            await subscribeSelectedRecipient(id);
-        }
-        if (button.dataset.action === 'unsubscribe-recipient') {
-            await unsubscribeSelectedRecipient(id);
         }
     }));
 

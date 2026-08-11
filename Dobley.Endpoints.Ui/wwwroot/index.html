@@ -51,7 +51,11 @@
                 <button id="refresh-recipients-button" class="icon-button" type="button" title="Обновить">↻</button>
             </div>
             <select id="recipient-select"></select>
-            <div class="hint">После открытия Telegram человек подключается командой /start с кодом.</div>
+            <div class="button-row">
+                <button id="subscribe-recipient-button" type="button">Включить рассылку</button>
+                <button id="unsubscribe-recipient-button" class="secondary" type="button">Выключить рассылку</button>
+            </div>
+            <div class="hint">Рассылка включается или выключается для выбранного Telegram-чата целиком.</div>
         </section>
     </aside>
 
@@ -89,6 +93,7 @@
                     </div>
                 </form>
 
+                <button id="open-telegram-button" class="telegram-wide-button" type="button">Подписаться на обновления в Telegram</button>
                 <div id="storages-list" class="item-list"></div>
             </div>
 

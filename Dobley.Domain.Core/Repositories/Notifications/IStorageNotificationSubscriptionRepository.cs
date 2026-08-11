@@ -14,7 +14,7 @@ public interface IStorageNotificationSubscriptionRepository
     Task<IReadOnlyList<StorageNotificationSubscription>> GetForRecipientAsync(int notificationRecipientId,
         IReadOnlyCollection<int> storageIds, CancellationToken cancellationToken = default);
 
-    Task<StorageNotificationSubscription?> GetForRecipientAndStorageAsync(int notificationRecipientId, int storageId,
+    Task<IReadOnlyList<StorageNotificationSubscription>> GetForRecipientAsync(int notificationRecipientId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<int>> GetStorageIdsAsync(int notificationRecipientId,

@@ -640,7 +640,7 @@
           }
         },
         {
-          "name": "Unsubscribe Recipient From Storage",
+          "name": "Disable Recipient Mailing",
           "request": {
             "method": "DELETE",
             "header": [
@@ -653,7 +653,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/notifications/recipients/{{notificationRecipientId}}/subscriptions/{{storageId}}"
+            "url": "{{baseUrl}}/api/notifications/recipients/{{notificationRecipientId}}/subscriptions"
           }
         }
       ]

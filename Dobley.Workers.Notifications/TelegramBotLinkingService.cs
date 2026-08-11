@@ -77,13 +77,13 @@ public class TelegramBotLinkingService(
 
             if (IsCommand(text, "/sub"))
             {
-                await SendSubscriptions(botToken, chatId, cancellationToken);
+                await Subscribe(botToken, chatId, cancellationToken);
                 continue;
             }
 
-            if (TryGetUnsubscribeStorageId(text, out var storageId))
+            if (IsCommand(text, "/unsub"))
             {
-                await Unsubscribe(botToken, chatId, storageId, cancellationToken);
+                await Unsubscribe(botToken, chatId, cancellationToken);
                 continue;
             }
 
@@ -125,9 +125,6 @@ public class TelegramBotLinkingService(
         var commonRepository = scope.ServiceProvider.GetRequiredService<ICommonRepository>();
         var inviteRepository = scope.ServiceProvider.GetRequiredService<INotificationInviteRepository>();
         var recipientRepository = scope.ServiceProvider.GetRequiredService<INotificationRecipientRepository>();
-        var storageRepository = scope.ServiceProvider.GetRequiredService<IStorageRepository>();
-        var subscriptionRepository =
-            scope.ServiceProvider.GetRequiredService<IStorageNotificationSubscriptionRepository>();
         var now = DateTime.UtcNow;
 
         var invite = await inviteRepository.GetByCodeAsync(code, cancellationToken);
@@ -159,10 +156,80 @@ public class TelegramBotLinkingService(
             recipient.UpdateDisplayName(displayName);
         }
 
-        var defaultNotifyBeforeDays = GetDefaultNotifyBeforeDays();
-        var storageIds = await storageRepository.GetStorageIdsAsync(invite.UserName, cancellationToken);
+        await SubscribeRecipient(scope.ServiceProvider, recipient.Id, recipient.UserName, cancellationToken);
+        invite.MarkUsed(now);
+        await commonRepository.SaveChangesAsync(cancellationToken);
 
-        var existingSubscriptions = await subscriptionRepository.GetForRecipientAsync(recipient.Id, storageIds,
+        await SendMessage(botToken, chatId, "Готово, рассылка уведомлений подключена.", cancellationToken);
+    }
+
+    private async Task Subscribe(string botToken, string chatId, CancellationToken cancellationToken)
+    {
+        using var scope = services.CreateScope();
+        var commonRepository = scope.ServiceProvider.GetRequiredService<ICommonRepository>();
+        var recipientRepository = scope.ServiceProvider.GetRequiredService<INotificationRecipientRepository>();
+        var recipient = await recipientRepository.GetByChannelAndExternalIdAsync(NotificationChannel.Telegram, chatId,
+            cancellationToken);
+
+        if (recipient == null)
+        {
+            await SendMessage(botToken, chatId, "Сначала подключи Telegram командой /start <код>.", cancellationToken);
+            return;
+        }
+
+        var affectedCount = await SubscribeRecipient(scope.ServiceProvider, recipient.Id, recipient.UserName,
+            cancellationToken);
+        await commonRepository.SaveChangesAsync(cancellationToken);
+
+        await SendMessage(botToken, chatId,
+            affectedCount == 0
+                ? "В профиле пока нет хранилищ для рассылки."
+                : $"Готово, рассылка включена. Хранилищ в рассылке: {affectedCount}.",
+            cancellationToken);
+    }
+
+    private async Task Unsubscribe(string botToken, string chatId, CancellationToken cancellationToken)
+    {
+        using var scope = services.CreateScope();
+        var commonRepository = scope.ServiceProvider.GetRequiredService<ICommonRepository>();
+        var recipientRepository = scope.ServiceProvider.GetRequiredService<INotificationRecipientRepository>();
+        var subscriptionRepository =
+            scope.ServiceProvider.GetRequiredService<IStorageNotificationSubscriptionRepository>();
+
+        var recipient = await recipientRepository.GetByChannelAndExternalIdAsync(NotificationChannel.Telegram, chatId,
+            cancellationToken);
+        if (recipient == null)
+        {
+            await SendMessage(botToken, chatId, "Сначала подключи Telegram командой /start <код>.", cancellationToken);
+            return;
+        }
+
+        var subscriptions = await subscriptionRepository.GetForRecipientAsync(recipient.Id, cancellationToken);
+        var enabledSubscriptions = subscriptions.Where(x => x.IsEnabled).ToArray();
+        foreach (var subscription in enabledSubscriptions)
+        {
+            subscription.Disable();
+        }
+
+        await commonRepository.SaveChangesAsync(cancellationToken);
+
+        await SendMessage(botToken, chatId,
+            enabledSubscriptions.Length == 0
+                ? "Активной рассылки для этого Telegram-чата нет."
+                : "Готово, рассылка уведомлений выключена.",
+            cancellationToken);
+    }
+
+    private static async Task<int> SubscribeRecipient(IServiceProvider serviceProvider, int recipientId,
+        string userName, CancellationToken cancellationToken)
+    {
+        var storageRepository = serviceProvider.GetRequiredService<IStorageRepository>();
+        var subscriptionRepository =
+            serviceProvider.GetRequiredService<IStorageNotificationSubscriptionRepository>();
+        var defaultNotifyBeforeDays = GetDefaultNotifyBeforeDays();
+        var storageIds = await storageRepository.GetStorageIdsAsync(userName, cancellationToken);
+
+        var existingSubscriptions = await subscriptionRepository.GetForRecipientAsync(recipientId, storageIds,
             cancellationToken);
         foreach (var subscription in existingSubscriptions.Where(x => !x.IsEnabled))
         {
@@ -171,93 +238,13 @@ public class TelegramBotLinkingService(
 
         var subscriptions = storageIds
             .Except(existingSubscriptions.Select(x => x.StorageId))
-            .Select(storageId => StorageNotificationSubscription.Create(recipient.Id, storageId,
+            .Select(storageId => StorageNotificationSubscription.Create(recipientId, storageId,
                 defaultNotifyBeforeDays))
             .ToArray();
 
         await subscriptionRepository.AddRangeAsync(subscriptions, cancellationToken);
-        invite.MarkUsed(now);
-        await commonRepository.SaveChangesAsync(cancellationToken);
 
-        await SendMessage(botToken, chatId, "Готово, уведомления по хранилищам подключены.", cancellationToken);
-    }
-
-    private async Task SendSubscriptions(string botToken, string chatId, CancellationToken cancellationToken)
-    {
-        using var scope = services.CreateScope();
-        var recipientRepository = scope.ServiceProvider.GetRequiredService<INotificationRecipientRepository>();
-        var storageRepository = scope.ServiceProvider.GetRequiredService<IStorageRepository>();
-        var subscriptionRepository =
-            scope.ServiceProvider.GetRequiredService<IStorageNotificationSubscriptionRepository>();
-
-        var recipient = await recipientRepository.GetByChannelAndExternalIdAsync(NotificationChannel.Telegram, chatId,
-            cancellationToken);
-        if (recipient == null)
-        {
-            await SendMessage(botToken, chatId, "Сначала подключи Telegram командой /start <код>.", cancellationToken);
-            return;
-        }
-
-        var storages = await storageRepository.GetCollectionAsync(
-            new StorageFilter().SetUserNames([recipient.UserName]), cancellationToken) ?? [];
-        if (storages.Count == 0)
-        {
-            await SendMessage(botToken, chatId, "У профиля пока нет хранилищ.", cancellationToken);
-            return;
-        }
-
-        var subscriptions = await subscriptionRepository.GetForRecipientAsync(recipient.Id,
-            storages.Select(x => x.Id).ToArray(), cancellationToken);
-        var lines = storages.Select(storage =>
-        {
-            var subscription = subscriptions.FirstOrDefault(x => x.StorageId == storage.Id);
-            var status = subscription?.IsEnabled == true ? "подписка включена" : "подписки нет";
-            return $"{storage.Id}. {storage.Name} - {status}";
-        });
-
-        await SendMessage(botToken, chatId,
-            $"Хранилища:\n{string.Join("\n", lines)}\n\nОтписка: /unsub <id хранилища>",
-            cancellationToken);
-    }
-
-    private async Task Unsubscribe(string botToken, string chatId, int storageId, CancellationToken cancellationToken)
-    {
-        using var scope = services.CreateScope();
-        var commonRepository = scope.ServiceProvider.GetRequiredService<ICommonRepository>();
-        var recipientRepository = scope.ServiceProvider.GetRequiredService<INotificationRecipientRepository>();
-        var storageRepository = scope.ServiceProvider.GetRequiredService<IStorageRepository>();
-        var subscriptionRepository =
-            scope.ServiceProvider.GetRequiredService<IStorageNotificationSubscriptionRepository>();
-
-        var recipient = await recipientRepository.GetByChannelAndExternalIdAsync(NotificationChannel.Telegram, chatId,
-            cancellationToken);
-        if (recipient == null)
-        {
-            await SendMessage(botToken, chatId, "Сначала подключи Telegram командой /start <код>.", cancellationToken);
-            return;
-        }
-
-        var storage = await storageRepository.GetOwnedStorageAsync(storageId, recipient.UserName, cancellationToken);
-        if (storage == null)
-        {
-            await SendMessage(botToken, chatId, "Хранилище не найдено в подключенном профиле.", cancellationToken);
-            return;
-        }
-
-        var subscription = await subscriptionRepository.GetForRecipientAndStorageAsync(recipient.Id, storageId,
-            cancellationToken);
-        if (subscription == null || !subscription.IsEnabled)
-        {
-            await SendMessage(botToken, chatId, $"Активной подписки на хранилище \"{storage.Name}\" нет.",
-                cancellationToken);
-            return;
-        }
-
-        subscription.Disable();
-        await commonRepository.SaveChangesAsync(cancellationToken);
-
-        await SendMessage(botToken, chatId, $"Готово, отписал чат от хранилища \"{storage.Name}\".",
-            cancellationToken);
+        return storageIds.Count;
     }
 
     private async Task SendMessage(string botToken, string chatId, string text, CancellationToken cancellationToken)
@@ -279,8 +266,8 @@ public class TelegramBotLinkingService(
         => "Команды бота:\n"
            + "/start <код> - подключить Telegram к профилю.\n"
            + "/invite - создать новый код приглашения для этого профиля.\n"
-           + "/sub - показать хранилища и статус подписки.\n"
-           + "/unsub <id хранилища> - отписаться от уведомлений по хранилищу.\n"
+           + "/sub - включить рассылку уведомлений.\n"
+           + "/unsub - выключить рассылку уведомлений.\n"
            + "/help - показать команды.";
 
     private static int GetDefaultNotifyBeforeDays()
@@ -305,16 +292,6 @@ public class TelegramBotLinkingService(
 
         code = string.Empty;
         return false;
-    }
-
-    private static bool TryGetUnsubscribeStorageId(string text, out int storageId)
-    {
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        storageId = 0;
-
-        return parts.Length == 2
-               && IsCommandToken(parts[0], "/unsub")
-               && int.TryParse(parts[1], out storageId);
     }
 
     private static bool IsCommandToken(string token, string command)

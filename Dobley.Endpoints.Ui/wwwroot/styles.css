@@ -235,6 +235,11 @@ textarea:focus {
     padding: 16px;
 }
 
+.telegram-wide-button {
+    margin: 16px 16px 0;
+    width: calc(100% - 32px);
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
