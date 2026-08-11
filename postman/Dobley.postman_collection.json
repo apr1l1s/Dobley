@@ -638,6 +638,23 @@
             },
             "url": "{{baseUrl}}/api/notifications/recipients/{{notificationRecipientId}}/subscriptions"
           }
+        },
+        {
+          "name": "Unsubscribe Recipient From Storage",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Connection",
+                "value": "close"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/notifications/recipients/{{notificationRecipientId}}/subscriptions/{{storageId}}"
+          }
         }
       ]
     },

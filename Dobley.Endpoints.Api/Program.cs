@@ -220,11 +220,15 @@ notificationsApi.MapPost("/recipients/{recipientId}/subscriptions", async (int r
         return Results.BadRequest(new { error = "Одно или несколько хранилищ не найдены" });
     }
 
-    var existingStorageIds = await storageNotificationSubscriptionRepository.GetStorageIdsAsync(recipientId,
-        cancellationToken);
+    var existingSubscriptions = await storageNotificationSubscriptionRepository.GetForRecipientAsync(recipientId,
+        ownedStorageIds, cancellationToken);
+    foreach (var subscription in existingSubscriptions.Where(x => !x.IsEnabled))
+    {
+        subscription.Enable();
+    }
 
     var newSubscriptions = ownedStorageIds
-        .Except(existingStorageIds)
+        .Except(existingSubscriptions.Select(x => x.StorageId))
         .Select(storageId => StorageNotificationSubscription.Create(recipient.Id, storageId,
             request.NotifyBeforeDays))
         .ToArray();
@@ -232,7 +236,35 @@ notificationsApi.MapPost("/recipients/{recipientId}/subscriptions", async (int r
     await storageNotificationSubscriptionRepository.AddRangeAsync(newSubscriptions, cancellationToken);
     await commonRepository.SaveChangesAsync(cancellationToken);
 
-    return Results.Ok(newSubscriptions.Select(StorageNotificationSubscriptionResponse.Create));
+    return Results.Ok(existingSubscriptions
+        .Concat(newSubscriptions)
+        .Select(StorageNotificationSubscriptionResponse.Create));
+});
+
+notificationsApi.MapDelete("/recipients/{recipientId}/subscriptions/{storageId}", async (int recipientId,
+    int storageId, ClaimsPrincipal user,
+    [FromServices] INotificationRecipientRepository notificationRecipientRepository,
+    [FromServices] IStorageNotificationSubscriptionRepository storageNotificationSubscriptionRepository,
+    [FromServices] ICommonRepository commonRepository, CancellationToken cancellationToken) =>
+{
+    var userName = GetCurrentUserName(user);
+    var recipient = await notificationRecipientRepository.GetForUserAsync(recipientId, userName, cancellationToken);
+    if (recipient == null)
+    {
+        return Results.NotFound();
+    }
+
+    var subscription = await storageNotificationSubscriptionRepository.GetForRecipientAndStorageAsync(recipientId,
+        storageId, cancellationToken);
+    if (subscription == null)
+    {
+        return Results.NotFound();
+    }
+
+    subscription.Disable();
+    await commonRepository.SaveChangesAsync(cancellationToken);
+
+    return Results.NoContent();
 });
 
 app.Run();

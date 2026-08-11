@@ -150,10 +150,15 @@ public class TelegramBotLinkingService(
         var defaultNotifyBeforeDays = GetDefaultNotifyBeforeDays();
         var storageIds = await storageRepository.GetStorageIdsAsync(invite.UserName, cancellationToken);
 
-        var existingStorageIds = await subscriptionRepository.GetStorageIdsAsync(recipient.Id, cancellationToken);
+        var existingSubscriptions = await subscriptionRepository.GetForRecipientAsync(recipient.Id, storageIds,
+            cancellationToken);
+        foreach (var subscription in existingSubscriptions.Where(x => !x.IsEnabled))
+        {
+            subscription.Enable();
+        }
 
         var subscriptions = storageIds
-            .Except(existingStorageIds)
+            .Except(existingSubscriptions.Select(x => x.StorageId))
             .Select(storageId => StorageNotificationSubscription.Create(recipient.Id, storageId,
                 defaultNotifyBeforeDays))
             .ToArray();

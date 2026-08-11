@@ -30,6 +30,18 @@ public class StorageNotificationSubscriptionRepository(DobleyContext context)
             .Where(x => x.IsEnabled)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<StorageNotificationSubscription>> GetForRecipientAsync(int notificationRecipientId,
+        IReadOnlyCollection<int> storageIds, CancellationToken cancellationToken = default)
+        => await Context.StorageNotificationSubscriptions
+            .Where(x => x.NotificationRecipientId == notificationRecipientId && storageIds.Contains(x.StorageId))
+            .ToListAsync(cancellationToken);
+
+    public Task<StorageNotificationSubscription?> GetForRecipientAndStorageAsync(int notificationRecipientId,
+        int storageId, CancellationToken cancellationToken = default)
+        => Context.StorageNotificationSubscriptions.FirstOrDefaultAsync(
+            x => x.NotificationRecipientId == notificationRecipientId && x.StorageId == storageId,
+            cancellationToken);
+
     public override Task<PaginatedCollection<StorageNotificationSubscription>> GetPaginatedCollection(
         StorageNotificationSubscriptionFilter? filter, int pageNumber = 1, int pageSize = 10,
         CancellationToken cancellationToken = default)
