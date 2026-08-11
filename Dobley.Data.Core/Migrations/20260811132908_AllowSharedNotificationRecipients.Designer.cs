@@ -3,6 +3,7 @@ using System;
 using Dobley.Data.Core.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Dobley.Data.Core.Migrations
 {
     [DbContext(typeof(DobleyContext))]
-    partial class DobleyContextModelSnapshot : ModelSnapshot
+    [Migration("20260811132908_AllowSharedNotificationRecipients")]
+    partial class AllowSharedNotificationRecipients
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -104,8 +107,7 @@ namespace Dobley.Data.Core.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserName", "Channel", "ExternalId")
-                        .IsUnique()
-                        .HasFilter("\"DateDeleted\" IS NULL");
+                        .IsUnique();
 
                     b.ToTable("NotificationRecipients", (string)null);
                 });
@@ -144,8 +146,7 @@ namespace Dobley.Data.Core.Migrations
                     b.HasIndex("StorageId");
 
                     b.HasIndex("NotificationRecipientId", "StorageId")
-                        .IsUnique()
-                        .HasFilter("\"DateDeleted\" IS NULL");
+                        .IsUnique();
 
                     b.ToTable("StorageNotificationSubscriptions", (string)null);
                 });

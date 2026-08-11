@@ -17,10 +17,17 @@ public class NotificationRecipientRepository(DobleyContext context)
         NotificationRecipientFilter filter, CancellationToken cancellationToken = default)
         => await FilterEntities(filter).ToListAsync(cancellationToken);
 
-    public Task<NotificationRecipient?> GetByChannelAndExternalIdAsync(NotificationChannel channel, string externalId,
+    public async Task<IReadOnlyList<NotificationRecipient>> GetCollectionByChannelAndExternalIdAsync(
+        NotificationChannel channel, string externalId, CancellationToken cancellationToken = default)
+        => await Context.NotificationRecipients
+            .Where(x => x.Channel == channel && x.ExternalId == externalId)
+            .OrderBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+    public Task<NotificationRecipient?> GetForUserAsync(string userName, NotificationChannel channel, string externalId,
         CancellationToken cancellationToken = default)
         => Context.NotificationRecipients.FirstOrDefaultAsync(
-            x => x.Channel == channel && x.ExternalId == externalId, cancellationToken);
+            x => x.UserName == userName && x.Channel == channel && x.ExternalId == externalId, cancellationToken);
 
     public async Task<IReadOnlyList<NotificationRecipient>> GetCollectionForUserAsync(string userName,
         CancellationToken cancellationToken = default)

@@ -140,7 +140,8 @@ public class DobleyContext
             entity.Property(x => x.DisplayName)
                 .HasMaxLength(200);
 
-            entity.HasIndex(x => new { x.Channel, x.ExternalId })
+            entity.HasIndex(x => new { x.UserName, x.Channel, x.ExternalId })
+                .HasFilter("\"DateDeleted\" IS NULL")
                 .IsUnique();
 
             entity.HasOne(x => x.DomainUser)
@@ -182,6 +183,7 @@ public class DobleyContext
             entity.HasKey(x => x.Id);
 
             entity.HasIndex(x => new { x.NotificationRecipientId, x.StorageId })
+                .HasFilter("\"DateDeleted\" IS NULL")
                 .IsUnique();
 
             entity.HasOne(x => x.DomainNotificationRecipient)

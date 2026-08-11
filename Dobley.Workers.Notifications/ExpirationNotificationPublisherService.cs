@@ -17,6 +17,9 @@ public class ExpirationNotificationPublisherService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("Expiration notification watcher started with interval {IntervalSeconds} seconds.",
+            interval.TotalSeconds);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
