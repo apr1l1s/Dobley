@@ -108,6 +108,42 @@ services:
       start_period: 30s
     restart: always
 
+  dobley.notifications:
+    image: dobley.workers.notifications
+    container_name: dobley.notifications
+    build:
+      context: .
+      dockerfile: Dobley.Workers.Notifications/Dockerfile
+    environment:
+      DB_HOST: dobley.postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
+      DB_NAME: postgres
+      REDIS_CONNECTION: ${REDIS_CONNECTION:-dobley.redis:6379}
+      RABBITMQ_HOST: dobley.rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin}
+      RABBITMQ_NOTIFICATION_QUEUE: ${RABBITMQ_NOTIFICATION_QUEUE:-dobley.notifications}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      DEFAULT_NOTIFY_BEFORE_DAYS: ${DEFAULT_NOTIFY_BEFORE_DAYS:-3}
+      EXPIRATION_WATCH_INTERVAL_SECONDS: ${EXPIRATION_WATCH_INTERVAL_SECONDS:-21600}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://dobley.otel-collector:4317}
+      LOG_FILE_PATH: /app/logs/notifications.log
+      DATA_PROTECTION_KEYS_PATH: /app/data-protection-keys
+    networks:
+      - dobley-network
+    volumes:
+      - dobley_notifications_logs:/app/logs
+      - dobley_notifications_data_protection_keys:/app/data-protection-keys
+    depends_on:
+      dobley.postgres:
+        condition: service_healthy
+      dobley.rabbitmq:
+        condition: service_healthy
+    restart: always
+
   dobley.redis:
     image: redis:7-alpine
     container_name: dobley.redis
@@ -120,6 +156,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: always
+
+  dobley.rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: dobley.rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+    networks:
+      - dobley-network
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     restart: always
 
   dobley.elasticsearch:
@@ -220,6 +275,9 @@ volumes:
   dobley_auth_logs:
     name: dobley_auth_logs
     driver: local
+  dobley_notifications_logs:
+    name: dobley_notifications_logs
+    driver: local
   dobley_gateway_data_protection_keys:
     name: dobley_gateway_data_protection_keys
     driver: local
@@ -228,4 +286,7 @@ volumes:
     driver: local
   dobley_auth_data_protection_keys:
     name: dobley_auth_data_protection_keys
+    driver: local
+  dobley_notifications_data_protection_keys:
+    name: dobley_notifications_data_protection_keys
     driver: local

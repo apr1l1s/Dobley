@@ -22,6 +22,8 @@ public class Product
 
     public string Barcode { get; set; } = null!;
 
+    public DateTime? ExpirationDate { get; private set; }
+
     public int StorageId { get; set; }
 
     public Storage? DomainStorage { get; set; }
@@ -39,17 +41,17 @@ public class Product
     }
 
     public static Product Create(string name, string description, Category category, decimal unit, UnitType unitType,
-        decimal price, string barcode, Storage storage)
+        decimal price, string barcode, Storage storage, DateTime? expirationDate = null)
     {
         var product = Create(name, description, category.ToString(), unit, unitType.ToString(), price, barcode,
-            storage.Id);
+            storage.Id, expirationDate);
         product.DomainStorage = storage;
 
         return product;
     }
 
     public static Product Create(string name, string description, string category, decimal unit, string unitType,
-        decimal price, string barcode, int storageId)
+        decimal price, string barcode, int storageId, DateTime? expirationDate = null)
     {
         if (name.IsNullOrEmpty() || name.Length > 100)
         {
@@ -100,12 +102,13 @@ public class Product
             UnitType = parsedUnitType,
             Price = price,
             Barcode = barcode,
+            ExpirationDate = expirationDate,
             StorageId = storageId
         };
     }
 
     public Product Update(string? name, string? description, Category? category, decimal? unit, UnitType? unitType,
-        decimal? price, string? barcode)
+        decimal? price, string? barcode, DateTime? expirationDate = null)
     {
         var updatedProduct = Create(
             name ?? Name,
@@ -115,7 +118,8 @@ public class Product
             (unitType ?? UnitType).ToString(),
             price ?? Price,
             barcode ?? Barcode,
-            StorageId
+            StorageId,
+            expirationDate ?? ExpirationDate
         );
 
         if (name != null)
@@ -151,6 +155,11 @@ public class Product
         if (barcode != null)
         {
             Barcode = updatedProduct.Barcode;
+        }
+
+        if (expirationDate != null)
+        {
+            ExpirationDate = updatedProduct.ExpirationDate;
         }
 
         return this;

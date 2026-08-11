@@ -6,10 +6,12 @@ using System.Text.Json.Serialization.Metadata;
 using System.Text.Unicode;
 using Dobley.Data.Core.Context;
 using Dobley.Data.Core.Repositories;
+using Dobley.Data.Core.Repositories.Notifications;
 using Dobley.Data.Core.Repositories.Products;
 using Dobley.Data.Core.Repositories.Storages;
 using Dobley.Data.Core.Repositories.Users;
 using Dobley.Domain.Core.Repositories;
+using Dobley.Domain.Core.Repositories.Notifications;
 using Dobley.Domain.Core.Repositories.Products;
 using Dobley.Domain.Core.Repositories.Storages;
 using Dobley.Domain.Core.Repositories.Users;
@@ -95,41 +97,14 @@ public static class DependencyInjection
 
     public static WebApplicationBuilder AddDobleyLogging(this WebApplicationBuilder builder, string serviceName)
     {
-        var otlpEndpoint = Environment.GetEnvironmentVariable(OTLP_ENDPOINT_VARIABLE) ??
-                           "http://dobley.otel-collector:4317";
-        var logFilePath = Environment.GetEnvironmentVariable(LOG_FILE_PATH_VARIABLE) ??
-                          Path.Combine("logs", $"{serviceName}.log");
-        var dataProtectionKeysPath = Environment.GetEnvironmentVariable(DATA_PROTECTION_KEYS_PATH_VARIABLE);
+        ConfigureDobleyLogging(builder.Services, builder.Logging, serviceName);
 
-        if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
-        {
-            builder.Services.AddDataProtection()
-                .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
-                .SetApplicationName(serviceName);
-        }
+        return builder;
+    }
 
-        builder.Logging.ClearProviders();
-        builder.Logging.AddNLog(CreateNLogConfiguration(logFilePath), new NLogProviderOptions
-        {
-            CaptureMessageTemplates = true,
-            CaptureMessageProperties = true,
-            IncludeScopes = true,
-            RemoveLoggerFactoryFilter = false,
-            ShutdownOnDispose = true
-        });
-        builder.Logging.AddOpenTelemetry(options =>
-        {
-            options.IncludeFormattedMessage = true;
-            options.IncludeScopes = true;
-            options.ParseStateValues = true;
-            options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName));
-            options.AddOtlpExporter(exporterOptions => exporterOptions.Endpoint = new Uri(otlpEndpoint));
-        });
-
-        builder.Logging.AddFilter("Microsoft", MsLogLevel.Warning);
-        builder.Logging.AddFilter("Microsoft.AspNetCore", MsLogLevel.Warning);
-        builder.Logging.AddFilter("Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager", MsLogLevel.Error);
-        builder.Logging.AddFilter("Yarp", MsLogLevel.Information);
+    public static HostApplicationBuilder AddDobleyLogging(this HostApplicationBuilder builder, string serviceName)
+    {
+        ConfigureDobleyLogging(builder.Services, builder.Logging, serviceName);
 
         return builder;
     }
@@ -147,8 +122,11 @@ public static class DependencyInjection
     {
         services
             .AddScoped<ICommonRepository, CommonRepository>()
+            .AddScoped<INotificationInviteRepository, NotificationInviteRepository>()
+            .AddScoped<INotificationRecipientRepository, NotificationRecipientRepository>()
             .AddScoped<IProductRepository, ProductRepository>()
             .AddScoped<IStorageRepository, StorageRepository>()
+            .AddScoped<IStorageNotificationSubscriptionRepository, StorageNotificationSubscriptionRepository>()
             .AddScoped<IUserRepository, UserRepository>();
 
         return services;
@@ -275,6 +253,46 @@ public static class DependencyInjection
         configuration.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, fileTarget);
 
         return configuration;
+    }
+
+    private static void ConfigureDobleyLogging(IServiceCollection services, ILoggingBuilder logging,
+        string serviceName)
+    {
+        var otlpEndpoint = Environment.GetEnvironmentVariable(OTLP_ENDPOINT_VARIABLE) ??
+                           "http://dobley.otel-collector:4317";
+        var logFilePath = Environment.GetEnvironmentVariable(LOG_FILE_PATH_VARIABLE) ??
+                          Path.Combine("logs", $"{serviceName}.log");
+        var dataProtectionKeysPath = Environment.GetEnvironmentVariable(DATA_PROTECTION_KEYS_PATH_VARIABLE);
+
+        if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+        {
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+                .SetApplicationName(serviceName);
+        }
+
+        logging.ClearProviders();
+        logging.AddNLog(CreateNLogConfiguration(logFilePath), new NLogProviderOptions
+        {
+            CaptureMessageTemplates = true,
+            CaptureMessageProperties = true,
+            IncludeScopes = true,
+            RemoveLoggerFactoryFilter = false,
+            ShutdownOnDispose = true
+        });
+        logging.AddOpenTelemetry(options =>
+        {
+            options.IncludeFormattedMessage = true;
+            options.IncludeScopes = true;
+            options.ParseStateValues = true;
+            options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName));
+            options.AddOtlpExporter(exporterOptions => exporterOptions.Endpoint = new Uri(otlpEndpoint));
+        });
+
+        logging.AddFilter("Microsoft", MsLogLevel.Warning);
+        logging.AddFilter("Microsoft.AspNetCore", MsLogLevel.Warning);
+        logging.AddFilter("Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager", MsLogLevel.Error);
+        logging.AddFilter("Yarp", MsLogLevel.Information);
     }
 
     private static string GetConnectionString()

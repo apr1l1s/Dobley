@@ -1,4 +1,5 @@
 using Dobley.Domain.Core.Entities.Products;
+using Dobley.Domain.Core.Entities.Notifications;
 using Dobley.Domain.Core.Entities.Storages;
 using Dobley.Domain.Core.Entities.Users;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,13 @@ public class DobleyContext
 
     public DbSet<Product> Products { get; set; }
 
+    public DbSet<NotificationInvite> NotificationInvites { get; set; }
+
+    public DbSet<NotificationRecipient> NotificationRecipients { get; set; }
+
     public DbSet<Storage> Storages { get; set; }
+
+    public DbSet<StorageNotificationSubscription> StorageNotificationSubscriptions { get; set; }
 
     public DbSet<User> Users { get; set; }
 
@@ -79,9 +86,66 @@ public class DobleyContext
                 .IsRequired()
                 .HasMaxLength(50);
 
+            entity.Property(p => p.ExpirationDate);
+
             entity.HasOne(p => p.DomainStorage)
                 .WithMany()
                 .HasForeignKey(p => p.StorageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NotificationInvite>(entity =>
+        {
+            entity.ToTable("NotificationInvites");
+            entity.HasQueryFilter(x => x.DateDeleted == null);
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.UserName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(x => x.Code)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.HasIndex(x => x.Code)
+                .IsUnique();
+
+            entity.HasOne(x => x.DomainUser)
+                .WithMany()
+                .HasForeignKey(x => x.UserName)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NotificationRecipient>(entity =>
+        {
+            entity.ToTable("NotificationRecipients");
+            entity.HasQueryFilter(x => x.DateDeleted == null);
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.UserName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(x => x.Channel)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            entity.Property(x => x.ExternalId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.DisplayName)
+                .HasMaxLength(200);
+
+            entity.HasIndex(x => new { x.Channel, x.ExternalId })
+                .IsUnique();
+
+            entity.HasOne(x => x.DomainUser)
+                .WithMany()
+                .HasForeignKey(x => x.UserName)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -107,6 +171,27 @@ public class DobleyContext
             entity.HasOne(s => s.DomainUser)
                 .WithMany()
                 .HasForeignKey(s => s.UserName)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StorageNotificationSubscription>(entity =>
+        {
+            entity.ToTable("StorageNotificationSubscriptions");
+            entity.HasQueryFilter(x => x.DateDeleted == null);
+
+            entity.HasKey(x => x.Id);
+
+            entity.HasIndex(x => new { x.NotificationRecipientId, x.StorageId })
+                .IsUnique();
+
+            entity.HasOne(x => x.DomainNotificationRecipient)
+                .WithMany()
+                .HasForeignKey(x => x.NotificationRecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.DomainStorage)
+                .WithMany()
+                .HasForeignKey(x => x.StorageId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

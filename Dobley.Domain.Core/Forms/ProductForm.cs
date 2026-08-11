@@ -22,6 +22,8 @@ public class ProductForm
 
     public string? Barcode { get; set; }
 
+    public DateTime? ExpirationDate { get; set; }
+
     public int? StorageId { get; set; }
 
     public Storage? DomainStorage { get; set; }
@@ -37,6 +39,7 @@ public class ProductForm
             Unit = product.Unit,
             UnitType = product.UnitType,
             Barcode = product.Barcode,
+            ExpirationDate = product.ExpirationDate,
             StorageId = product.StorageId
         };
 
@@ -65,6 +68,6 @@ public class ProductForm
         var storageId = StorageId.Value;
 
         return Product.Create(name, description, category.ToString(), unit, unitType.ToString(), price, barcode,
-            storageId);
+            storageId, ExpirationDate);
     }
 }

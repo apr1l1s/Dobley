@@ -55,7 +55,7 @@ public static class DevelopmentDataSeeder
         }
 
         var product = Product.Create("Молоко", "Тестовый продукт для локальной разработки", Category.Dairy, 1,
-            UnitType.Liters, 89.90m, DEMO_PRODUCT_BARCODE, storage);
+            UnitType.Liters, 89.90m, DEMO_PRODUCT_BARCODE, storage, DateTime.UtcNow.AddDays(2));
         await context.Products.AddAsync(product, cancellationToken);
         await commonRepository.SaveChangesAsync(cancellationToken);
     }

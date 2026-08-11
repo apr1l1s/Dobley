@@ -20,7 +20,7 @@ public record PutProductUseCaseHandler(IProductRepository ProductRepository, ICo
         }
 
         product = product.Update(request.Form.Name, request.Form.Description, request.Form.Category, request.Form.Unit,
-            request.Form.UnitType, request.Form.Price, request.Form.Barcode);
+            request.Form.UnitType, request.Form.Price, request.Form.Barcode, request.Form.ExpirationDate);
 
         await CommonRepository.SaveChangesAsync(cancellationToken);
         return product;

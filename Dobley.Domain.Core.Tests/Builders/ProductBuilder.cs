@@ -8,10 +8,10 @@ public static class ProductBuilder
 
     public static Product Build(int? id = null, string name = "Milk", string description = "Fresh milk",
         string? category = null, decimal unit = 1, string? unitType = null, decimal price = 120,
-        string barcode = "4600000000000", int storageId = 1)
+        string barcode = "4600000000000", DateTime? expirationDate = null, int storageId = 1)
     {
         var product = Product.Create(name, description, category ?? Category.Dairy.ToString(), unit,
-            unitType ?? UnitType.Liters.ToString(), price, barcode, storageId);
+            unitType ?? UnitType.Liters.ToString(), price, barcode, storageId, expirationDate);
 
         product.Id = id ?? ++LastId;
 

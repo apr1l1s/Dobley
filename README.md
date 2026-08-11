@@ -44,7 +44,38 @@ Products
 - Unit decimal(18,2)
 - UnitType varchar(50)
 - Barcode varchar(50)
+- ExpirationDate timestamp nullable
 - StorageId int foreign key -> Storages.Id
+- DateAdded timestamp
+- DateUpdated timestamp
+- DateDeleted timestamp nullable
+
+NotificationRecipients
+- Id int primary key
+- UserName varchar(100) foreign key -> Users.Login
+- Channel varchar(50)
+- ExternalId varchar(200)
+- DisplayName varchar(200) nullable
+- DateAdded timestamp
+- DateUpdated timestamp
+- DateDeleted timestamp nullable
+
+NotificationInvites
+- Id int primary key
+- UserName varchar(100) foreign key -> Users.Login
+- Code varchar(100)
+- ExpiresAt timestamp
+- UsedAt timestamp nullable
+- DateAdded timestamp
+- DateUpdated timestamp
+- DateDeleted timestamp nullable
+
+StorageNotificationSubscriptions
+- Id int primary key
+- NotificationRecipientId int foreign key -> NotificationRecipients.Id
+- StorageId int foreign key -> Storages.Id
+- NotifyBeforeDays int
+- IsEnabled boolean
 - DateAdded timestamp
 - DateUpdated timestamp
 - DateDeleted timestamp nullable
@@ -77,6 +108,8 @@ Gateway: http://localhost:5000
 Gateway health: http://localhost:5000/health
 Postgres: localhost:5432
 Redis: localhost:6379
+RabbitMQ: localhost:5672
+RabbitMQ Management: http://localhost:15672
 Grafana: http://localhost:3000
 Elasticsearch: http://localhost:9200
 ```
@@ -215,6 +248,14 @@ DELETE /api/products/{id}
 POST /api/products/create
 ```
 
+Notifications:
+
+```text
+POST /api/notifications/invites/create
+GET /api/notifications/recipients
+POST /api/notifications/recipients/{recipientId}/subscriptions
+```
+
 РњРµС‚РѕРґС‹ РїСЂРѕРґСѓРєС‚РѕРІ Рё С…СЂР°РЅРёР»РёС‰ РІРѕР·РІСЂР°С‰Р°СЋС‚ Рё РёР·РјРµРЅСЏСЋС‚ С‚РѕР»СЊРєРѕ РґР°РЅРЅС‹Рµ, РїСЂРёРЅР°РґР»РµР¶Р°С‰РёРµ С‚РµРєСѓС‰РµРјСѓ JWT-РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ.
 
 ## РџСЂРѕРІРµСЂРєРё СЂР°Р·СЂР°Р±РѕС‚РєРё
@@ -261,6 +302,12 @@ SECRET_KEY                  СЃРµРєСЂРµС‚ JWT, РјРёРЅРёРјСѓРј 32 Р±Р°Р№С‚Р°
 JWT_ISSUER                  issuer JWT, Р·РЅР°С‡РµРЅРёРµ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ apr1l1s_auth
 JWT_AUDIENCE                audience JWT, Р·РЅР°С‡РµРЅРёРµ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ apr1l1s_services
 REDIS_CONNECTION            РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє Redis РґР»СЏ refresh-С‚РѕРєРµРЅРѕРІ
+RABBITMQ_USER               РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ RabbitMQ
+RABBITMQ_PASSWORD           РїР°СЂРѕР»СЊ RabbitMQ
+RABBITMQ_NOTIFICATION_QUEUE РѕС‡РµСЂРµРґСЊ СѓРІРµРґРѕРјР»РµРЅРёР№ Рѕ СЃСЂРѕРєРµ РіРѕРґРЅРѕСЃС‚Рё
+TELEGRAM_BOT_TOKEN          С‚РѕРєРµРЅ Telegram Bot API; С…СЂР°РЅРёС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ Р»РѕРєР°Р»СЊРЅРѕРј .env
+DEFAULT_NOTIFY_BEFORE_DAYS  РєРѕР»РёС‡РµСЃС‚РІРѕ РґРЅРµР№ РґРѕ СѓРІРµРґРѕРјР»РµРЅРёСЏ РїСЂРё РїРѕРґРїРёСЃРєРµ С‡РµСЂРµР· bot invite
+EXPIRATION_WATCH_INTERVAL_SECONDS РёРЅС‚РµСЂРІР°Р» РїСЂРѕРІРµСЂРєРё СЃСЂРѕРєРѕРІ РіРѕРґРЅРѕСЃС‚Рё worker-СЃРµСЂРІРёСЃРѕРј
 SEED_DEV_DATA               РІРєР»СЋС‡РµРЅРёРµ Р»РѕРєР°Р»СЊРЅС‹С… РґРµРјРѕ-РґР°РЅРЅС‹С…
 OTEL_EXPORTER_OTLP_ENDPOINT endpoint OpenTelemetry Collector
 LOG_FILE_PATH               РїСѓС‚СЊ Рє Р±Р°Р·РѕРІРѕРјСѓ Р»РѕРєР°Р»СЊРЅРѕРјСѓ fallback log file РґР»СЏ NLog
@@ -305,3 +352,35 @@ Raw Documents
 ```
 
 Р›РѕРєР°Р»СЊРЅС‹Рµ fallback logs СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ Docker volumes С‡РµСЂРµР· NLog РєР°Рє daily files, РЅР°РїСЂРёРјРµСЂ `/app/logs/api-2026-08-11.log`.
+
+## Уведомления о сроке годности
+
+Для уведомлений используется нейтральная модель получателей. В базе нет таблиц с названием Telegram: Telegram является значением канала `NotificationChannel`, а внешний идентификатор хранится в `NotificationRecipients.ExternalId`.
+
+Сценарий подключения:
+
+```text
+1. Пользователь Dobley создаёт код подключения через POST /api/notifications/invites/create.
+2. Человек открывает Telegram-бота и отправляет /start <code>.
+3. Worker создаёт NotificationRecipient с Channel=Telegram и ExternalId=chatId.
+4. Получатель автоматически подписывается на текущие хранилища пользователя.
+5. Expiration watcher ищет продукты с ExpirationDate в пределах NotifyBeforeDays.
+6. Worker публикует сообщение в RabbitMQ.
+7. Telegram consumer читает очередь и отправляет сообщение через Telegram Bot API.
+```
+
+Пример создания продукта со сроком годности:
+
+```json
+{
+  "name": "Milk",
+  "description": "Fresh milk",
+  "price": 120,
+  "category": "Dairy",
+  "unit": 1,
+  "unitType": "Liters",
+  "barcode": "4600000000000",
+  "expirationDate": "2026-08-15T00:00:00Z",
+  "storageId": 1
+}
+```

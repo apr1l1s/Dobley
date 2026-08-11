@@ -3,8 +3,9 @@ using Dobley.Domain.Core.Entities.Products;
 namespace Dobley.Domain.Core.Tests.Products;
 
 public record CreatingProductTestCase(string TestName, string? Name, string? Description, string? Category,
-    decimal Unit, string? UnitType, decimal Price, string? Barcode, int StorageId, bool IsValid,
-    Category? ExpectedCategory = null, UnitType? ExpectedUnitType = null, int? ExpectedStorageId = null)
+    decimal Unit, string? UnitType, decimal Price, string? Barcode, DateTime? ExpirationDate, int StorageId,
+    bool IsValid, Category? ExpectedCategory = null, UnitType? ExpectedUnitType = null,
+    int? ExpectedStorageId = null, DateTime? ExpectedExpirationDate = null)
 {
     public override string ToString() => TestName;
 }
@@ -23,11 +24,13 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: DateTime.UtcNow.AddDays(3),
             StorageId: 1,
             IsValid: true,
             ExpectedCategory: Category.Dairy,
             ExpectedUnitType: UnitType.Liters,
-            ExpectedStorageId: 1);
+            ExpectedStorageId: 1,
+            ExpectedExpirationDate: DateTime.UtcNow.AddDays(3));
 
         yield return new CreatingProductTestCase(
             TestName: "1.2 Корректный продукт с другой категорией и единицей измерения",
@@ -38,6 +41,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Pieces.ToString(),
             Price: 300,
             Barcode: "4600000000001",
+            ExpirationDate: null,
             StorageId: 2,
             IsValid: true,
             ExpectedCategory: Category.Beverages,
@@ -53,6 +57,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -65,6 +70,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -77,6 +83,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -89,6 +96,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -101,6 +109,7 @@ public class CreatingProductTestDataGenerator
             UnitType: "Unknown",
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -113,6 +122,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: -1,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -125,6 +135,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: null,
+            ExpirationDate: null,
             StorageId: 1,
             IsValid: false);
 
@@ -137,6 +148,7 @@ public class CreatingProductTestDataGenerator
             UnitType: UnitType.Liters.ToString(),
             Price: 120,
             Barcode: "4600000000000",
+            ExpirationDate: null,
             StorageId: 0,
             IsValid: false);
     }

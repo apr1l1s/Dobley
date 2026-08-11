@@ -24,6 +24,18 @@ public class StorageRepository(DobleyContext context)
     public Task<Storage?> GetOwnedStorageAsync(int id, string userName, CancellationToken cancellationToken = default)
         => FilterEntities(new StorageFilter(id).SetUserNames([userName])).FirstOrDefaultAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<int>> GetOwnedStorageIdsAsync(string userName, IReadOnlyCollection<int> storageIds,
+        CancellationToken cancellationToken = default)
+        => await FilterEntities(new StorageFilter().SetIds(storageIds.ToArray()).SetUserNames([userName]))
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<int>> GetStorageIdsAsync(string userName,
+        CancellationToken cancellationToken = default)
+        => await FilterEntities(new StorageFilter().SetUserNames([userName]))
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
     private IQueryable<Storage> FilterEntities(StorageFilter? filter)
     {
         var storages = Context.Storages.AsQueryable();

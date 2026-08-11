@@ -2,7 +2,11 @@ using System.Security.Claims;
 using System.Text;
 using Dobley.Data.Core;
 using Dobley.Data.Core.Context;
+using Dobley.Domain.Core.Entities.Notifications;
 using Dobley.Domain.Core.Forms;
+using Dobley.Domain.Core.Repositories;
+using Dobley.Domain.Core.Repositories.Notifications;
+using Dobley.Domain.Core.Repositories.Storages;
 using Dobley.Domain.Core.UseCases;
 using Dobley.Domain.Core.UseCases.Products;
 using Dobley.Domain.Core.UseCases.Storages;
@@ -166,12 +170,83 @@ storagesApi.MapPost("/create", async ([FromBody] StorageForm form, ClaimsPrincip
         ? Results.Created($"/storages/{storage.Id}", StorageResponse.Create(storage))
         : Results.NotFound());
 
+var notificationsApi = app.MapGroup("/notifications").RequireAuthorization();
+
+notificationsApi.MapPost("/invites/create", async ([FromBody] CreateNotificationInviteRequest? request,
+    ClaimsPrincipal user, [FromServices] INotificationInviteRepository notificationInviteRepository,
+    [FromServices] ICommonRepository commonRepository, CancellationToken cancellationToken) =>
+{
+    var expiresAt = request?.ExpiresAt ?? DateTime.UtcNow.AddDays(1);
+    var invite = NotificationInvite.Create(GetCurrentUserName(user), CreateNotificationInviteCode(), expiresAt);
+
+    await notificationInviteRepository.AddAsync(invite, cancellationToken);
+    await commonRepository.SaveChangesAsync(cancellationToken);
+
+    return Results.Created($"/notifications/invites/{invite.Id}", NotificationInviteResponse.Create(invite));
+});
+
+notificationsApi.MapGet("/recipients", async (ClaimsPrincipal user,
+        [FromServices] INotificationRecipientRepository notificationRecipientRepository,
+        CancellationToken cancellationToken)
+    => Results.Ok((await notificationRecipientRepository.GetCollectionForUserAsync(GetCurrentUserName(user),
+            cancellationToken))
+        .Select(NotificationRecipientResponse.Create)));
+
+notificationsApi.MapPost("/recipients/{recipientId}/subscriptions", async (int recipientId,
+    [FromBody] StorageNotificationSubscriptionRequest? request, ClaimsPrincipal user,
+    [FromServices] INotificationRecipientRepository notificationRecipientRepository,
+    [FromServices] IStorageNotificationSubscriptionRepository storageNotificationSubscriptionRepository,
+    [FromServices] IStorageRepository storageRepository, [FromServices] ICommonRepository commonRepository,
+    CancellationToken cancellationToken) =>
+{
+    var userName = GetCurrentUserName(user);
+    if (request?.StorageIds is not { Count: > 0 })
+    {
+        return Results.BadRequest(new { error = "Необходимо указать хотя бы одно хранилище" });
+    }
+
+    var recipient = await notificationRecipientRepository.GetForUserAsync(recipientId, userName, cancellationToken);
+    if (recipient == null)
+    {
+        return Results.NotFound();
+    }
+
+    var storageIds = request.StorageIds.Distinct().ToArray();
+    var ownedStorageIds = await storageRepository.GetOwnedStorageIdsAsync(userName, storageIds, cancellationToken);
+
+    if (ownedStorageIds.Count != storageIds.Length)
+    {
+        return Results.BadRequest(new { error = "Одно или несколько хранилищ не найдены" });
+    }
+
+    var existingStorageIds = await storageNotificationSubscriptionRepository.GetStorageIdsAsync(recipientId,
+        cancellationToken);
+
+    var newSubscriptions = ownedStorageIds
+        .Except(existingStorageIds)
+        .Select(storageId => StorageNotificationSubscription.Create(recipient.Id, storageId,
+            request.NotifyBeforeDays))
+        .ToArray();
+
+    await storageNotificationSubscriptionRepository.AddRangeAsync(newSubscriptions, cancellationToken);
+    await commonRepository.SaveChangesAsync(cancellationToken);
+
+    return Results.Ok(newSubscriptions.Select(StorageNotificationSubscriptionResponse.Create));
+});
+
 app.Run();
 
 static string GetCurrentUserName(ClaimsPrincipal user)
     => user.FindFirstValue(ClaimTypes.Name)
        ?? user.FindFirstValue(ClaimTypes.NameIdentifier)
        ?? throw new UnauthorizedAccessException("User name claim is required.");
+
+static string CreateNotificationInviteCode()
+    => Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+        .Replace("+", string.Empty)
+        .Replace("/", string.Empty)
+        .Replace("=", string.Empty)
+        .ToUpperInvariant()[..12];
 
 static async Task<bool> CheckCache(IDistributedCache cache, CancellationToken cancellationToken)
 {

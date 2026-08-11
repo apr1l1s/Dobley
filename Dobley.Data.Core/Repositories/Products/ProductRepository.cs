@@ -21,6 +21,16 @@ public class ProductRepository(DobleyContext context)
         int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         => ToPaginatedCollection(FilterEntities(filter), pageIndex, pageSize, cancellationToken);
 
+    public async Task<IReadOnlyList<Product>> GetExpiringProductsAsync(IReadOnlyCollection<int> storageIds,
+        DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default)
+        => await Context.Products
+            .Include(x => x.DomainStorage)
+            .Where(x => storageIds.Contains(x.StorageId) &&
+                        x.ExpirationDate != null &&
+                        x.ExpirationDate.Value.Date >= fromDate.Date &&
+                        x.ExpirationDate.Value.Date < toDate.Date)
+            .ToListAsync(cancellationToken);
+
     public Task<Product?> GetOwnedProductAsync(int id, string userName, CancellationToken cancellationToken = default)
         => FilterEntities(new ProductFilter(id).SetUserNames([userName])).FirstOrDefaultAsync(cancellationToken);
 
