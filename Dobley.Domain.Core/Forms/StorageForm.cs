@@ -24,12 +24,26 @@ public class StorageForm
 
     public Storage ToEntity(string userName)
     {
-        if (Name.IsNullOrEmpty() || Description.IsNullOrEmpty())
+        var missedFieldNames = GetMissedFieldNames().ToArray();
+        if (missedFieldNames.Length > 0)
         {
             throw new DomainValidateStorageException(
-                "Не все обязательные поля хранилища заполнены");
+                $"Не заполнены обязательные поля хранилища: {string.Join(", ", missedFieldNames)}");
         }
 
         return Storage.Create(Name!, Description!, userName);
+    }
+
+    private IEnumerable<string> GetMissedFieldNames()
+    {
+        if (Name.IsNullOrEmpty())
+        {
+            yield return nameof(Name);
+        }
+
+        if (Description.IsNullOrEmpty())
+        {
+            yield return nameof(Description);
+        }
     }
 }

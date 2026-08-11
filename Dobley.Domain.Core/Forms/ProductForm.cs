@@ -45,29 +45,66 @@ public class ProductForm
 
     public Product ToEntity()
     {
-        if (Name.IsNullOrEmpty()
-            || Description.IsNullOrEmpty()
-            || Category is null
-            || Unit is null
-            || UnitType is null
-            || Price is null
-            || Barcode.IsNullOrEmpty()
-            || StorageId is null)
+        var missedFieldNames = GetMissedFieldNames().ToArray();
+        if (missedFieldNames.Length > 0)
         {
             throw new DomainValidateProductException(
-                "Не все обязательные поля продукта заполнены");
+                $"Не заполнены обязательные поля продукта: {string.Join(", ", missedFieldNames)}");
         }
 
         var name = Name!;
         var description = Description!;
-        var category = Category.Value;
-        var unit = Unit.Value;
-        var unitType = UnitType.Value;
-        var price = Price.Value;
+        var category = Category!.Value;
+        var unit = Unit!.Value;
+        var unitType = UnitType!.Value;
+        var price = Price!.Value;
         var barcode = Barcode!;
-        var storageId = StorageId.Value;
+        var storageId = StorageId!.Value;
 
         return Product.Create(name, description, category.ToString(), unit, unitType.ToString(), price, barcode,
             storageId, ExpirationDate);
+    }
+
+    private IEnumerable<string> GetMissedFieldNames()
+    {
+        if (Name.IsNullOrEmpty())
+        {
+            yield return nameof(Name);
+        }
+
+        if (Description.IsNullOrEmpty())
+        {
+            yield return nameof(Description);
+        }
+
+        if (Category is null)
+        {
+            yield return nameof(Category);
+        }
+
+        if (Unit is null)
+        {
+            yield return nameof(Unit);
+        }
+
+        if (UnitType is null)
+        {
+            yield return nameof(UnitType);
+        }
+
+        if (Price is null)
+        {
+            yield return nameof(Price);
+        }
+
+        if (Barcode.IsNullOrEmpty())
+        {
+            yield return nameof(Barcode);
+        }
+
+        if (StorageId is null)
+        {
+            yield return nameof(StorageId);
+        }
     }
 }
