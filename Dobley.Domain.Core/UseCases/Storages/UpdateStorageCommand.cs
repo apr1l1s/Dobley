@@ -5,13 +5,13 @@ using Dobley.Domain.Core.Repositories.Storages;
 
 namespace Dobley.Domain.Core.UseCases.Storages;
 
-public record PutStorageUseCase(int Id, StorageForm Form, string UserName)
+public record UpdateStorageCommand(int Id, StorageForm Form, string UserName)
     : IUseCase<Storage?>;
 
-public record PutStorageUseCaseHandler(IStorageRepository StorageRepository, ICommonRepository CommonRepository)
-    : IUseCaseHandler<PutStorageUseCase, Storage?>
+public record UpdateStorageCommandHandler(IStorageRepository StorageRepository, ICommonRepository CommonRepository)
+    : IUseCaseHandler<UpdateStorageCommand, Storage?>
 {
-    public async Task<Storage?> Handle(PutStorageUseCase request, CancellationToken cancellationToken)
+    public async Task<Storage?> Handle(UpdateStorageCommand request, CancellationToken cancellationToken)
     {
         var storage = await StorageRepository.GetOwnedStorageAsync(request.Id, request.UserName, cancellationToken);
         if (storage is null)

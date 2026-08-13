@@ -5,13 +5,13 @@ using Dobley.Domain.Core.Repositories.Storages;
 
 namespace Dobley.Domain.Core.UseCases.Storages;
 
-public record CreateStorageUseCase(StorageForm Form, string UserName)
+public record CreateStorageCommand(StorageForm Form, string UserName)
     : IUseCase<Storage?>;
 
-public record CreateStorageUseCaseHandler(IStorageRepository StorageRepository, ICommonRepository CommonRepository)
-    : IUseCaseHandler<CreateStorageUseCase, Storage?>
+public record CreateStorageCommandHandler(IStorageRepository StorageRepository, ICommonRepository CommonRepository)
+    : IUseCaseHandler<CreateStorageCommand, Storage?>
 {
-    public async Task<Storage?> Handle(CreateStorageUseCase request, CancellationToken cancellationToken)
+    public async Task<Storage?> Handle(CreateStorageCommand request, CancellationToken cancellationToken)
     {
         var storage = request.Form.ToEntity(request.UserName);
         await StorageRepository.AddAsync(storage, cancellationToken);

@@ -6,14 +6,14 @@ using Dobley.Domain.Core.Repositories.Storages;
 
 namespace Dobley.Domain.Core.UseCases.Products;
 
-public record CreateProductUseCase(ProductForm Form, string UserName)
+public record CreateProductCommand(ProductForm Form, string UserName)
     : IUseCase<Product?>;
 
-public record CreateProductUseCaseHandler(IProductRepository ProductRepository, IStorageRepository StorageRepository,
+public record CreateProductCommandHandler(IProductRepository ProductRepository, IStorageRepository StorageRepository,
     ICommonRepository CommonRepository)
-    : IUseCaseHandler<CreateProductUseCase, Product?>
+    : IUseCaseHandler<CreateProductCommand, Product?>
 {
-    public async Task<Product?> Handle(CreateProductUseCase request, CancellationToken cancellationToken)
+    public async Task<Product?> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
         if (request.Form.StorageId is null ||
             await StorageRepository.GetOwnedStorageAsync(request.Form.StorageId.Value, request.UserName,

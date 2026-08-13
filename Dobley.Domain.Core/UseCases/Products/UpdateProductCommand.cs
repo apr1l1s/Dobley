@@ -5,13 +5,13 @@ using Dobley.Domain.Core.Repositories.Products;
 
 namespace Dobley.Domain.Core.UseCases.Products;
 
-public record PutProductUseCase(int Id, ProductForm Form, string UserName)
+public record UpdateProductCommand(int Id, ProductForm Form, string UserName)
     : IUseCase<Product?>;
 
-public record PutProductUseCaseHandler(IProductRepository ProductRepository, ICommonRepository CommonRepository)
-    : IUseCaseHandler<PutProductUseCase, Product?>
+public record UpdateProductCommandHandler(IProductRepository ProductRepository, ICommonRepository CommonRepository)
+    : IUseCaseHandler<UpdateProductCommand, Product?>
 {
-    public async Task<Product?> Handle(PutProductUseCase request, CancellationToken cancellationToken)
+    public async Task<Product?> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         var product = await ProductRepository.GetOwnedProductAsync(request.Id, request.UserName, cancellationToken);
         if (product is null)
