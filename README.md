@@ -82,6 +82,15 @@ StorageNotificationSubscriptions
 - DateAdded timestamp
 - DateUpdated timestamp
 - DateDeleted timestamp nullable
+
+NotificationDeliveries
+- Id int primary key
+- NotificationRecipientId int foreign key -> NotificationRecipients.Id
+- ProductId int foreign key -> Products.Id
+- ExpirationDate timestamp
+- Channel varchar(50)
+- DateAdded timestamp
+- DateUpdated timestamp
 ```
 
 Миграции расположены в каталоге `Dobley.Data.Core/Migrations`.
@@ -404,6 +413,8 @@ Cache hit ratio, активные запросы, ожидания и locks
 6. Worker публикует сообщение в RabbitMQ.
 7. Telegram consumer читает очередь и отправляет сообщение через Telegram Bot API.
 ```
+
+После успешной публикации worker сохраняет факт отправки в `NotificationDeliveries`. Уникальность задаётся связкой `NotificationRecipientId + ProductId + ExpirationDate + Channel`, поэтому после рестарта worker не отправляет повторное уведомление по тому же продукту и той же дате срока годности.
 
 Команды Telegram-бота:
 
