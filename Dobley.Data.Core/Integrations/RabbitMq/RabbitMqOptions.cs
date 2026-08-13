@@ -1,4 +1,4 @@
-namespace Dobley.Workers.Notifications;
+﻿namespace Dobley.Data.Core.Integrations.RabbitMq;
 
 public class RabbitMqOptions
 {

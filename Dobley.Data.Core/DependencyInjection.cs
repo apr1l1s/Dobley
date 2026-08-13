@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.Unicode;
 using Dobley.Data.Core.Context;
+using Dobley.Data.Core.Integrations.RabbitMq;
+using Dobley.Data.Core.Integrations.Telegram;
 using Dobley.Data.Core.Repositories;
 using Dobley.Data.Core.Repositories.Notifications;
 using Dobley.Data.Core.Repositories.Products;
@@ -118,10 +120,24 @@ public static class DependencyInjection
         return services;
     }
 
+    public static IServiceCollection AddNotificationIntegrations(this IServiceCollection services)
+    {
+        services
+            .AddHttpClient()
+            .AddSingleton<RabbitMqOptions>()
+            .AddSingleton<ITelegramBotClient, TelegramBotClient>()
+            .AddSingleton<INotificationMessageConsumer, RabbitMqNotificationMessageConsumer>()
+            .AddSingleton<INotificationMessagePublisher, RabbitMqNotificationMessagePublisher>();
+
+        return services;
+    }
+
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services
             .AddScoped<ICommonRepository, CommonRepository>()
+            .AddScoped<IHealthCheckRepository, HealthCheckRepository>()
+            .AddScoped<INotificationDeliveryRepository, NotificationDeliveryRepository>()
             .AddScoped<INotificationInviteRepository, NotificationInviteRepository>()
             .AddScoped<INotificationRecipientRepository, NotificationRecipientRepository>()
             .AddScoped<IProductRepository, ProductRepository>()

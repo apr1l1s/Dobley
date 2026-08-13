@@ -29,6 +29,7 @@
       <PackageReference Include="NLog.Extensions.Logging" Version="6.1.0" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
       <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
+      <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
     </ItemGroup>
 

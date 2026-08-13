@@ -1,12 +1,14 @@
 using Dobley.Data.Core;
-using Dobley.Workers.Notifications;
+using Dobley.Workers.Notifications.ExpirationNotifications;
+using Dobley.Workers.Notifications.Telegram;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
     .AddCoreServices()
-    .AddHttpClient()
-    .AddSingleton<RabbitMqOptions>()
+    .AddNotificationIntegrations()
+    .AddScoped<IExpirationNotificationPublishingService, ExpirationNotificationPublishingService>()
+    .AddScoped<ITelegramBotCommandHandler, TelegramBotCommandHandler>()
     .AddHostedService<ExpirationNotificationPublisherService>()
     .AddHostedService<TelegramBotLinkingService>()
     .AddHostedService<TelegramNotificationConsumerService>();
