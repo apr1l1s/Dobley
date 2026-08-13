@@ -22,6 +22,8 @@ public class DobleyContext
 
     public DbSet<NotificationInvite> NotificationInvites { get; set; }
 
+    public DbSet<NotificationDelivery> NotificationDeliveries { get; set; }
+
     public DbSet<NotificationRecipient> NotificationRecipients { get; set; }
 
     public DbSet<Storage> Storages { get; set; }
@@ -115,6 +117,30 @@ public class DobleyContext
             entity.HasOne(x => x.DomainUser)
                 .WithMany()
                 .HasForeignKey(x => x.UserName)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NotificationDelivery>(entity =>
+        {
+            entity.ToTable("NotificationDeliveries");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Channel)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            entity.HasIndex(x => new { x.NotificationRecipientId, x.ProductId, x.ExpirationDate, x.Channel })
+                .IsUnique();
+
+            entity.HasOne(x => x.DomainNotificationRecipient)
+                .WithMany()
+                .HasForeignKey(x => x.NotificationRecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.DomainProduct)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
