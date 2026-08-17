@@ -74,6 +74,7 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:-apr1l1s_services}
       SEED_DEV_DATA: ${SEED_DEV_DATA:-false}
       REDIS_CONNECTION: ${REDIS_CONNECTION:-dobley.redis:6379}
+      ENABLE_SWAGGER: ${ENABLE_SWAGGER:-true}
       ASPNETCORE_HTTP_PORTS: 5001
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://dobley.otel-collector:4317}
       LOG_FILE_PATH: /app/logs/api.log

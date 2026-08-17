@@ -1,51 +1,19 @@
-using System.Text;
 using Dobley.Data.Core;
 using Dobley.Data.Core.Context;
 using Dobley.Endpoints.Api.Endpoints;
 using Dobley.Endpoints.Api.ExceptionHandling;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.AddDobleyLogging("Dobley.Endpoints.Api");
 
 var isLocal = builder.Configuration.GetValue<bool>("ASPNET_LOCAL");
+var isSwaggerEnabled = builder.Configuration.IsApiSwaggerEnabled();
 
 builder.Host.ConfigureAppServices(isLocal);
 
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = DependencyInjection.GetJwtIssuer(),
-            ValidAudience = DependencyInjection.GetJwtAudience(),
-            IssuerSigningKey =
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(DependencyInjection.GetRequiredSecretKey()))
-        };
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
-            {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
-                    .CreateLogger("JwtBearer");
-                logger.LogWarning(context.Exception, "Ошибка JWT-аутентификации.");
-
-                return Task.CompletedTask;
-            }
-        };
-    });
-
 builder.Services
+    .AddApiAuthentication()
     .AddAuthorization()
     .AddExceptionHandler<ApiExceptionHandler>()
     .AddProblemDetails()
@@ -54,8 +22,7 @@ builder.Services
     .ConfigureHttpJsonOptions(options => DependencyInjection.AddDefaultJsonConverters(options.SerializerOptions))
     .Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true)
     .AddCoreServices()
-    .AddEndpointsApiExplorer()
-    .AddSwaggerGen();
+    .AddApiSwagger();
 
 var app = builder.Build();
 
@@ -66,7 +33,7 @@ app.UseDobleyRequestLogging();
 app.UseExceptionHandler();
 app.UseOutputCache();
 
-if (isLocal)
+if (isSwaggerEnabled)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -80,6 +47,7 @@ app
     .MapProductDictionaryEndpoints()
     .MapProductEndpoints()
     .MapStorageEndpoints()
-    .MapNotificationEndpoints();
+    .MapNotificationEndpoints()
+    .MapAdminDatabaseEndpoints();
 
 app.Run();

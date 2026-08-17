@@ -18,6 +18,7 @@ using Dobley.Domain.Core.Repositories.Products;
 using Dobley.Domain.Core.Repositories.Storages;
 using Dobley.Domain.Core.Repositories.Users;
 using Dobley.Domain.Core.UseCases;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -26,6 +27,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using NLog.Config;
 using NLog.Extensions.Logging;
 using NLog.Targets;
@@ -46,6 +49,72 @@ public static class DependencyInjection
         services
             .AddCoreServices()
             .AddScoped<IAuthService, AuthService>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddApiAuthentication(this IServiceCollection services)
+    {
+        services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = GetJwtIssuer(),
+                    ValidAudience = GetJwtAudience(),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(GetRequiredSecretKey()))
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("JwtBearer");
+                        logger.LogWarning(context.Exception, "Ошибка JWT-аутентификации.");
+
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+
+        return services;
+    }
+
+    public static IServiceCollection AddApiSwagger(this IServiceCollection services)
+    {
+        services
+            .AddEndpointsApiExplorer()
+            .AddSwaggerGen(options =>
+            {
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "JWT токен из Auth API. Вставлять без префикса Bearer."
+                });
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    }] = []
+                });
+            });
 
         return services;
     }
@@ -207,6 +276,9 @@ public static class DependencyInjection
 
         return secretKey;
     }
+
+    public static bool IsApiSwaggerEnabled(this IConfiguration configuration)
+        => configuration.GetValue<bool>("ASPNET_LOCAL") || configuration.GetValue<bool>("ENABLE_SWAGGER");
 
     public static TSection GetTypedSection<TSection>(this IConfiguration configuration)
         where TSection : class, new()

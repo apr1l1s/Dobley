@@ -276,6 +276,21 @@ POST /api/notifications/recipients/{recipientId}/subscriptions
 DELETE /api/notifications/recipients/{recipientId}/subscriptions
 ```
 
+Admin database:
+
+```text
+GET /api/admin/db/tables
+GET /api/admin/db/{tableName}
+GET /api/admin/db/{tableName}/{key}
+POST /api/admin/db/{tableName}
+PATCH /api/admin/db/{tableName}/{key}
+DELETE /api/admin/db/{tableName}/{key}
+POST /api/admin/users
+PATCH /api/admin/users/{login}/password
+```
+
+Admin database endpoints доступны в Swagger при включённом `ENABLE_SWAGGER=true` и требуют JWT. Через общий CRUD можно работать со всеми EF-таблицами, включая `Users`; специальные endpoints `/api/admin/users` дополнительно хешируют пароль пользователя.
+
 Методы продуктов и хранилищ возвращают и изменяют только данные, принадлежащие текущему JWT-пользователю.
 
 ## Проверки разработки
