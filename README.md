@@ -312,6 +312,31 @@ Gateway health возвращает 200
 Создание продукта с некорректным телом возвращает русский 400 response
 ```
 
+## CI/CD
+
+В репозитории настроены GitHub Actions:
+
+```text
+.github/workflows/ci.yml      проверка pull request и push в master
+.github/workflows/docker.yml  публикация Docker images в GitHub Container Registry
+```
+
+CI выполняет:
+
+```text
+dotnet restore
+dotnet build --configuration Release
+dotnet test --configuration Release
+dotnet ef migrations script --idempotent
+docker compose config --quiet
+docker build для API, Auth, Gateway, UI и Notifications
+проверку, что Telegram token не попал в репозиторий
+```
+
+На push в `master` Docker workflow публикует образы в `ghcr.io` с тегами `latest` и `sha-<commit>`.
+Для публикации используется стандартный `GITHUB_TOKEN`, поэтому дополнительных secrets для GHCR не требуется.
+Секреты приложения, например `TELEGRAM_BOT_TOKEN`, `SECRET_KEY`, `DB_PASSWORD` и `RABBITMQ_PASSWORD`, должны храниться в GitHub Secrets и передаваться только на этапе реального деплоя.
+
 ## Конфигурация
 
 Ключевые переменные окружения:
@@ -330,7 +355,7 @@ TELEGRAM_ALLOWED_CHAT_ID    Telegram chat id пользователя, кото�
 TELEGRAM_ALLOWED_USERNAME   Telegram username пользователя, которому бот отвечает в личных сообщениях
 NOTIFICATION_CHANNEL        канал отправки напоминаний; сейчас доступен Telegram, архитектурно заложен Email
 NOTIFICATION_DESTINATION    адрес доставки уведомлений; для Telegram это chat id
-NOTIFICATION_USER_NAME         пользователь Dobley, по хранилищам которого worker ищет продукты для уведомлений
+NOTIFICATION_USER_NAME      пользователь Dobley, по хранилищам которого worker ищет продукты для уведомлений
 DOBLEY_UI_URL               публичная ссылка на UI, которую бот отправляет пользователю
 DEFAULT_NOTIFY_BEFORE_DAYS  количество дней до уведомления о сроке годности
 EXPIRATION_WATCH_INTERVAL_SECONDS интервал проверки сроков годности worker-сервисом
