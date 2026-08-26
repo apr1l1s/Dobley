@@ -366,11 +366,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select count(*)::bigint as value from \"NotificationRecipients\" where \"DateDeleted\" is null;",
+          "rawSql": "select count(*)::bigint as value from \"NotificationOutboxMessages\" where \"DateProcessed\" is null;",
           "refId": "A"
         }
       ],
-      "title": "Active Chats",
+      "title": "Pending Outbox Messages",
       "type": "stat"
     },
     {
@@ -430,11 +430,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select count(*)::bigint as value from \"StorageNotificationSubscriptions\" where \"DateDeleted\" is null and \"IsEnabled\" = true;",
+          "rawSql": "select count(*)::bigint as value from \"NotificationInboxMessages\";",
           "refId": "A"
         }
       ],
-      "title": "Enabled Subscriptions",
+      "title": "Processed Inbox Messages",
       "type": "stat"
     },
     {
@@ -612,7 +612,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select * from (\n  select 'Users' as table_name, count(*)::bigint as alive_rows from \"Users\" where \"DateDeleted\" is null\n  union all select 'Storages', count(*)::bigint from \"Storages\" where \"DateDeleted\" is null\n  union all select 'Products', count(*)::bigint from \"Products\" where \"DateDeleted\" is null\n  union all select 'NotificationRecipients', count(*)::bigint from \"NotificationRecipients\" where \"DateDeleted\" is null\n  union all select 'NotificationInvites', count(*)::bigint from \"NotificationInvites\" where \"DateDeleted\" is null\n  union all select 'StorageNotificationSubscriptions', count(*)::bigint from \"StorageNotificationSubscriptions\" where \"DateDeleted\" is null\n) rows order by alive_rows desc, table_name;",
+          "rawSql": "select * from (\n  select 'Users' as table_name, count(*)::bigint as alive_rows from \"Users\" where \"DateDeleted\" is null\n  union all select 'Storages', count(*)::bigint from \"Storages\" where \"DateDeleted\" is null\n  union all select 'Products', count(*)::bigint from \"Products\" where \"DateDeleted\" is null\n  union all select 'NotificationDeliveries', count(*)::bigint from \"NotificationDeliveries\"\n  union all select 'NotificationOutboxMessages', count(*)::bigint from \"NotificationOutboxMessages\"\n  union all select 'NotificationInboxMessages', count(*)::bigint from \"NotificationInboxMessages\"\n) rows order by alive_rows desc, table_name;",
           "refId": "A"
         }
       ],
@@ -834,11 +834,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select nr.\"Id\" as id,\n       nr.\"UserName\" as user_name,\n       nr.\"Channel\" as channel,\n       nr.\"DisplayName\" as display_name,\n       nr.\"ExternalId\" as external_id,\n       count(sns.\"Id\") filter (where sns.\"DateDeleted\" is null and sns.\"IsEnabled\" = true) as enabled_subscriptions\nfrom \"NotificationRecipients\" nr\nleft join \"StorageNotificationSubscriptions\" sns on sns.\"NotificationRecipientId\" = nr.\"Id\"\nwhere nr.\"DateDeleted\" is null\ngroup by nr.\"Id\", nr.\"UserName\", nr.\"Channel\", nr.\"DisplayName\", nr.\"ExternalId\"\norder by nr.\"Id\" desc;",
+          "rawSql": "select \"Id\" as id,\n       \"UserName\" as user_name,\n       \"Channel\" as channel,\n       \"Destination\" as destination,\n       \"Subject\" as subject,\n       \"ExpirationDate\" as expiration_date,\n       \"DateAdded\" as date_added\nfrom \"NotificationDeliveries\"\norder by \"Id\" desc\nlimit 50;",
           "refId": "A"
         }
       ],
-      "title": "Notification Recipients",
+      "title": "Recent Notification Deliveries",
       "type": "table"
     },
     {

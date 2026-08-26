@@ -8,7 +8,7 @@ Dobley представляет собой backend-систему на .NET дл
 Dobley.Endpoints.Api       API продуктов и хранилищ, JWT-авторизация, Swagger
 Dobley.Endpoints.Auth      Регистрация, вход, refresh-токены, выпуск JWT, Swagger
 Dobley.Endpoints.Gateway   YARP gateway для маршрутизации запросов к Auth и API
-Dobley.Endpoints.Ui        Веб-интерфейс для работы с хранилищами, продуктами и Telegram-подпиской
+Dobley.Endpoints.Ui        Веб-интерфейс для работы с хранилищами, продуктами и Telegram-уведомлениями
 Dobley.Workers.Notifications Worker уведомлений о сроках годности и Telegram-интеграции
 Dobley.Domain.Core         Сущности, валидация, формы, use cases, контракты репозиториев
 Dobley.Data.Core           EF Core DbContext, репозитории, миграции, dependency injection
@@ -53,42 +53,36 @@ Products
 - DateUpdated timestamp
 - DateDeleted timestamp nullable
 
-NotificationRecipients
-- Id int primary key
-- UserName varchar(100) foreign key -> Users.Login
-- Channel varchar(50)
-- ExternalId varchar(200)
-- DisplayName varchar(200) nullable
-- DateAdded timestamp
-- DateUpdated timestamp
-- DateDeleted timestamp nullable
-
-NotificationInvites
-- Id int primary key
-- UserName varchar(100) foreign key -> Users.Login
-- Code varchar(100)
-- ExpiresAt timestamp
-- UsedAt timestamp nullable
-- DateAdded timestamp
-- DateUpdated timestamp
-- DateDeleted timestamp nullable
-
-StorageNotificationSubscriptions
-- Id int primary key
-- NotificationRecipientId int foreign key -> NotificationRecipients.Id
-- StorageId int foreign key -> Storages.Id
-- NotifyBeforeDays int
-- IsEnabled boolean
-- DateAdded timestamp
-- DateUpdated timestamp
-- DateDeleted timestamp nullable
-
 NotificationDeliveries
 - Id int primary key
-- NotificationRecipientId int foreign key -> NotificationRecipients.Id
+- UserName varchar(100) foreign key -> Users.Login
+- Channel varchar(50)
+- Destination varchar(300)
 - ProductId int foreign key -> Products.Id
 - ExpirationDate timestamp
+- Subject varchar(200)
+- Body varchar(2000)
+- DateAdded timestamp
+- DateUpdated timestamp
+
+NotificationOutboxMessages
+- Id int primary key
+- MessageId uuid unique
 - Channel varchar(50)
+- Destination varchar(300)
+- Subject varchar(200)
+- Body varchar(2000)
+- AttemptCount int
+- DateProcessed timestamp nullable
+- Error varchar(2000) nullable
+- DateAdded timestamp
+- DateUpdated timestamp
+
+NotificationInboxMessages
+- Id int primary key
+- MessageId uuid unique
+- Channel varchar(50)
+- Destination varchar(300)
 - DateAdded timestamp
 - DateUpdated timestamp
 ```
@@ -129,7 +123,7 @@ Elasticsearch: http://localhost:9200
 
 Auth и Product API являются внутренними Docker-сервисами. Клиентские запросы направляются через gateway.
 
-Веб-интерфейс по адресу `http://localhost:5000/ui/` поддерживает регистрацию нового пользователя и вход в существующую учетную запись. После регистрации пользователь может сразу создавать хранилища, продукты и подключать Telegram-рассылку.
+Веб-интерфейс по адресу `http://localhost:5000/ui/` поддерживает регистрацию нового пользователя и вход в существующую учетную запись. После регистрации пользователь может сразу создавать хранилища, продукты и открывать Telegram-бота для получения ссылки на UI.
 
 Маршруты gateway:
 
@@ -266,16 +260,6 @@ DELETE /api/products/{id}
 POST /api/products/create
 ```
 
-Notifications:
-
-```text
-POST /api/notifications/invites/create
-GET /api/notifications/recipients
-DELETE /api/notifications/recipients/{recipientId}
-POST /api/notifications/recipients/{recipientId}/subscriptions
-DELETE /api/notifications/recipients/{recipientId}/subscriptions
-```
-
 Admin database:
 
 ```text
@@ -341,8 +325,14 @@ RABBITMQ_USER               пользователь RabbitMQ
 RABBITMQ_PASSWORD           пароль RabbitMQ
 RABBITMQ_NOTIFICATION_QUEUE очередь уведомлений о сроке годности
 TELEGRAM_BOT_TOKEN          токен Telegram Bot API; хранится только в локальном .env
-TELEGRAM_BOT_USERNAME       username Telegram-бота для UI-ссылки подписки; значение по умолчанию dobley_dev_bot
-DEFAULT_NOTIFY_BEFORE_DAYS  количество дней до уведомления при подписке через bot invite
+TELEGRAM_BOT_USERNAME       username Telegram-бота для открытия чата из UI; значение по умолчанию dobley_dev_bot
+TELEGRAM_ALLOWED_CHAT_ID    Telegram chat id пользователя, которому бот отвечает в личных сообщениях
+TELEGRAM_ALLOWED_USERNAME   Telegram username пользователя, которому бот отвечает в личных сообщениях
+NOTIFICATION_CHANNEL        канал отправки напоминаний; сейчас доступен Telegram, архитектурно заложен Email
+NOTIFICATION_DESTINATION    адрес доставки уведомлений; для Telegram это chat id
+NOTIFICATION_USER_NAME         пользователь Dobley, по хранилищам которого worker ищет продукты для уведомлений
+DOBLEY_UI_URL               публичная ссылка на UI, которую бот отправляет пользователю
+DEFAULT_NOTIFY_BEFORE_DAYS  количество дней до уведомления о сроке годности
 EXPIRATION_WATCH_INTERVAL_SECONDS интервал проверки сроков годности worker-сервисом
 SEED_DEV_DATA               включение локальных демо-данных
 OTEL_EXPORTER_OTLP_ENDPOINT endpoint OpenTelemetry Collector
@@ -399,7 +389,7 @@ Dashboard `Dobley Database` использует PostgreSQL datasource и пок
 ```text
 Количество пользователей, хранилищ и продуктов
 Продукты со сроком годности в ближайшие 3 дня
-Активные Telegram-чаты и включенные подписки
+Состояние NotificationDeliveries, NotificationOutboxMessages и NotificationInboxMessages
 Размер базы данных и количество подключений
 CPU, память и файловая система Postgres-контейнера
 Cache hit ratio, активные запросы, ожидания и locks
@@ -411,36 +401,35 @@ Cache hit ratio, активные запросы, ожидания и locks
 
 ## Уведомления о сроке годности
 
-Для уведомлений используется нейтральная модель получателей. В базе нет таблиц с названием Telegram: Telegram является значением канала `NotificationChannel`, а внешний идентификатор хранится в `NotificationRecipients.ExternalId`.
+Уведомления не завязаны на Telegram как на доменную модель. В домене используется общий канал `NotificationChannel`, адрес доставки `Destination`, факт отправки `NotificationDeliveries`, исходящая очередь БД `NotificationOutboxMessages` и входящая дедупликация `NotificationInboxMessages`. Telegram является только одной реализацией отправителя; для Email достаточно добавить новый sender под тот же интерфейс.
 
-Один и тот же внешний чат может быть подключен к нескольким пользователям Dobley. Уникальность получателя задаётся связкой `UserName + Channel + ExternalId`, поэтому выключенная рассылка у одного пользователя не блокирует подключение этого же чата к другому пользователю. Если Telegram-команда без кода неоднозначна для нескольких профилей, бот просит выбрать профиль через новый код подключения.
+Telegram-бот больше не регистрирует чат, не создаёт коды подключения и не управляет подписками через команды. Он работает только в личных сообщениях конкретного разрешённого пользователя и отправляет ссылку на UI из `DOBLEY_UI_URL`. Доступ задаётся через `TELEGRAM_ALLOWED_CHAT_ID` или `TELEGRAM_ALLOWED_USERNAME`; если оба значения пустые, бот не отвечает на сообщения.
 
-Команда `/unsub` только выключает рассылку и оставляет чат подключенным к профилю. Для полного отключения используется `/unlink`: бот мягко удаляет получателя и его подписки. Если чат подключен к нескольким профилям, используется `/unlink <код>`, где код создаётся в UI нужного профиля.
+Для отправки напоминаний worker использует `NOTIFICATION_DESTINATION`; для обратной совместимости при пустом значении берётся `TELEGRAM_ALLOWED_CHAT_ID`. Продукты выбираются из хранилищ пользователя `NOTIFICATION_USER_NAME`, значение по умолчанию `admin`. Интервал предупреждения задаётся `DEFAULT_NOTIFY_BEFORE_DAYS`.
 
 Сценарий подключения:
 
 ```text
-1. Пользователь Dobley создаёт код подключения через POST /api/notifications/invites/create.
-2. Человек открывает Telegram-бота и отправляет /start <code>.
-3. Worker создаёт NotificationRecipient с Channel=Telegram и ExternalId=chatId.
-4. Получатель автоматически подписывается на текущие хранилища пользователя.
-5. Expiration watcher ищет продукты с ExpirationDate в пределах NotifyBeforeDays.
-6. Worker публикует сообщение в RabbitMQ.
-7. Telegram consumer читает очередь и отправляет сообщение через Telegram Bot API.
+1. Пользователь открывает Telegram-бота в личном чате.
+2. Бот проверяет, что чат личный и пользователь разрешён настройками `TELEGRAM_ALLOWED_CHAT_ID` или `TELEGRAM_ALLOWED_USERNAME`.
+3. Бот отправляет ссылку на UI из `DOBLEY_UI_URL`.
+4. Expiration watcher ищет продукты пользователя `NOTIFICATION_USER_NAME` с ExpirationDate в пределах `DEFAULT_NOTIFY_BEFORE_DAYS`.
+5. Worker сохраняет `NotificationDelivery` и `NotificationOutboxMessage`.
+6. Outbox publisher читает необработанные сообщения из БД и публикует их в RabbitMQ.
+7. Inbox consumer читает RabbitMQ, проверяет `NotificationInboxMessages` по `MessageId` и пропускает дубликаты.
+8. Sender registry выбирает отправителя по `NotificationChannel`; для Telegram вызывается Telegram Bot API.
+9. После успешной отправки inbox consumer сохраняет `NotificationInboxMessage`.
 ```
 
-После успешной публикации worker сохраняет факт отправки в `NotificationDeliveries`. Уникальность задаётся связкой `NotificationRecipientId + ProductId + ExpirationDate + Channel`, поэтому после рестарта worker не отправляет повторное уведомление по тому же продукту и той же дате срока годности.
+`Outbox` используется между расчётом уведомлений и RabbitMQ: если RabbitMQ временно недоступен, сообщение остаётся в `NotificationOutboxMessages` и будет опубликовано повторно. `Inbox` используется после RabbitMQ: если сообщение доставлено повторно, `NotificationInboxMessages` не даст отправить его пользователю второй раз.
+
+`NotificationDeliveries` хранит бизнес-факт уведомления. Уникальность задаётся связкой `UserName + Channel + Destination + ProductId + ExpirationDate`, поэтому после рестарта worker не создаёт повторное уведомление по тому же продукту и той же дате срока годности.
 
 Команды Telegram-бота:
 
 ```text
-/start <код>  подключить Telegram-чат к профилю
-/invite       создать код приглашения для текущего профиля
-/sub          включить рассылку уведомлений
-/unsub        выключить рассылку, не отвязывая чат
-/unlink       отвязать чат от профиля
-/unlink <код> отвязать чат от конкретного профиля
-/help         показать команды
+/start открыть ссылку на UI
+/help  открыть ссылку на UI
 ```
 
 Пример создания продукта со сроком годности:
