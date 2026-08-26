@@ -20,15 +20,13 @@ public class DobleyContext
 
     public DbSet<Product> Products { get; set; }
 
-    public DbSet<NotificationInvite> NotificationInvites { get; set; }
-
     public DbSet<NotificationDelivery> NotificationDeliveries { get; set; }
 
-    public DbSet<NotificationRecipient> NotificationRecipients { get; set; }
+    public DbSet<NotificationInboxMessage> NotificationInboxMessages { get; set; }
+
+    public DbSet<NotificationOutboxMessage> NotificationOutboxMessages { get; set; }
 
     public DbSet<Storage> Storages { get; set; }
-
-    public DbSet<StorageNotificationSubscription> StorageNotificationSubscriptions { get; set; }
 
     public DbSet<User> Users { get; set; }
 
@@ -96,61 +94,12 @@ public class DobleyContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<NotificationInvite>(entity =>
-        {
-            entity.ToTable("NotificationInvites");
-            entity.HasQueryFilter(x => x.DateDeleted == null);
-
-            entity.HasKey(x => x.Id);
-
-            entity.Property(x => x.UserName)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            entity.Property(x => x.Code)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            entity.HasIndex(x => x.Code)
-                .IsUnique();
-
-            entity.HasOne(x => x.DomainUser)
-                .WithMany()
-                .HasForeignKey(x => x.UserName)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<NotificationDelivery>(entity =>
         {
             entity.ToTable("NotificationDeliveries");
 
             entity.HasKey(x => x.Id);
 
-            entity.Property(x => x.Channel)
-                .HasConversion<string>()
-                .HasMaxLength(50);
-
-            entity.HasIndex(x => new { x.NotificationRecipientId, x.ProductId, x.ExpirationDate, x.Channel })
-                .IsUnique();
-
-            entity.HasOne(x => x.DomainNotificationRecipient)
-                .WithMany()
-                .HasForeignKey(x => x.NotificationRecipientId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(x => x.DomainProduct)
-                .WithMany()
-                .HasForeignKey(x => x.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<NotificationRecipient>(entity =>
-        {
-            entity.ToTable("NotificationRecipients");
-            entity.HasQueryFilter(x => x.DateDeleted == null);
-
-            entity.HasKey(x => x.Id);
-
             entity.Property(x => x.UserName)
                 .IsRequired()
                 .HasMaxLength(100);
@@ -159,21 +108,79 @@ public class DobleyContext
                 .HasConversion<string>()
                 .HasMaxLength(50);
 
-            entity.Property(x => x.ExternalId)
+            entity.Property(x => x.Destination)
+                .IsRequired()
+                .HasMaxLength(300);
+
+            entity.Property(x => x.Subject)
                 .IsRequired()
                 .HasMaxLength(200);
 
-            entity.Property(x => x.DisplayName)
-                .HasMaxLength(200);
+            entity.Property(x => x.Body)
+                .IsRequired()
+                .HasMaxLength(2000);
 
-            entity.HasIndex(x => new { x.UserName, x.Channel, x.ExternalId })
-                .HasFilter("\"DateDeleted\" IS NULL")
+            entity.HasIndex(x => new { x.UserName, x.Channel, x.Destination, x.ProductId, x.ExpirationDate })
                 .IsUnique();
+
+            entity.HasOne(x => x.DomainProduct)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(x => x.DomainUser)
                 .WithMany()
                 .HasForeignKey(x => x.UserName)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NotificationInboxMessage>(entity =>
+        {
+            entity.ToTable("NotificationInboxMessages");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Channel)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            entity.Property(x => x.Destination)
+                .IsRequired()
+                .HasMaxLength(300);
+
+            entity.HasIndex(x => x.MessageId)
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<NotificationOutboxMessage>(entity =>
+        {
+            entity.ToTable("NotificationOutboxMessages");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Channel)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            entity.Property(x => x.Destination)
+                .IsRequired()
+                .HasMaxLength(300);
+
+            entity.Property(x => x.Subject)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.Body)
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            entity.Property(x => x.Error)
+                .HasMaxLength(2000);
+
+            entity.HasIndex(x => x.MessageId)
+                .IsUnique();
+
+            entity.HasIndex(x => x.DateProcessed);
         });
 
         modelBuilder.Entity<Storage>(entity =>
@@ -198,28 +205,6 @@ public class DobleyContext
             entity.HasOne(s => s.DomainUser)
                 .WithMany()
                 .HasForeignKey(s => s.UserName)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<StorageNotificationSubscription>(entity =>
-        {
-            entity.ToTable("StorageNotificationSubscriptions");
-            entity.HasQueryFilter(x => x.DateDeleted == null);
-
-            entity.HasKey(x => x.Id);
-
-            entity.HasIndex(x => new { x.NotificationRecipientId, x.StorageId })
-                .HasFilter("\"DateDeleted\" IS NULL")
-                .IsUnique();
-
-            entity.HasOne(x => x.DomainNotificationRecipient)
-                .WithMany()
-                .HasForeignKey(x => x.NotificationRecipientId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(x => x.DomainStorage)
-                .WithMany()
-                .HasForeignKey(x => x.StorageId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

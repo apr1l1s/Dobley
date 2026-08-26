@@ -17,13 +17,14 @@ public class NotificationDeliveryRepository(DobleyContext context)
         NotificationDeliveryFilter filter, CancellationToken cancellationToken = default)
         => await FilterEntities(filter).ToListAsync(cancellationToken);
 
-    public Task<bool> ExistsAsync(int notificationRecipientId, int productId, DateTime expirationDate,
-        NotificationChannel channel, CancellationToken cancellationToken = default)
+    public Task<bool> ExistsAsync(string userName, NotificationChannel channel, string destination, int productId,
+        DateTime expirationDate, CancellationToken cancellationToken = default)
         => Context.NotificationDeliveries.AnyAsync(x =>
-            x.NotificationRecipientId == notificationRecipientId &&
+            x.UserName == userName &&
+            x.Channel == channel &&
+            x.Destination == destination &&
             x.ProductId == productId &&
-            x.ExpirationDate == expirationDate.Date &&
-            x.Channel == channel, cancellationToken);
+            x.ExpirationDate == expirationDate.Date, cancellationToken);
 
     public override Task<PaginatedCollection<NotificationDelivery>> GetPaginatedCollection(
         NotificationDeliveryFilter? filter, int pageNumber = 1, int pageSize = 10,

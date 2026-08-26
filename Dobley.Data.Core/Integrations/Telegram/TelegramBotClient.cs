@@ -28,6 +28,7 @@ public class TelegramBotClient(IHttpClientFactory httpClientFactory)
                 x.UpdateId,
                 x.Message!.Chat.Id.ToString(),
                 x.Message.Chat.Type,
+                x.Message.Chat.UserName,
                 x.Message.Text,
                 x.Message.Chat.CreateDisplayName()))
             .ToArray() ?? [];

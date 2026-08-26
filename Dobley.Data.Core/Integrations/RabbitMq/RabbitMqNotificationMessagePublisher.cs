@@ -9,7 +9,7 @@ public class RabbitMqNotificationMessagePublisher(RabbitMqOptions rabbitMqOption
     ILogger<RabbitMqNotificationMessagePublisher> logger)
     : INotificationMessagePublisher
 {
-    public Task PublishAsync(TelegramNotificationMessage message, CancellationToken cancellationToken)
+    public Task PublishAsync(NotificationMessage message, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -33,7 +33,8 @@ public class RabbitMqNotificationMessagePublisher(RabbitMqOptions rabbitMqOption
         channel.BasicPublish(exchange: string.Empty, routingKey: rabbitMqOptions.QueueName, basicProperties: properties,
             body: body);
 
-        logger.LogInformation("Published expiration notification for Telegram chat {ExternalId}", message.ExternalId);
+        logger.LogInformation("Published notification for {Channel} destination {Destination}", message.Channel,
+            message.Destination);
 
         return Task.CompletedTask;
     }

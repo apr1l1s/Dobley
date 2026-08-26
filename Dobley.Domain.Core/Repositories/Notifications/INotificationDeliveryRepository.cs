@@ -5,6 +5,6 @@ namespace Dobley.Domain.Core.Repositories.Notifications;
 public interface INotificationDeliveryRepository
     : IRepository<NotificationDelivery, NotificationDeliveryFilter>
 {
-    Task<bool> ExistsAsync(int notificationRecipientId, int productId, DateTime expirationDate,
-        NotificationChannel channel, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(string userName, NotificationChannel channel, string destination, int productId,
+        DateTime expirationDate, CancellationToken cancellationToken = default);
 }

@@ -5,7 +5,6 @@ const state = {
     activeTab: localStorage.getItem('dobley.activeTab') || 'storages',
     storages: [],
     products: [],
-    recipients: [],
     telegramBotUserName: window.DobleyUiConfig?.telegramBotUserName || ''
 };
 
@@ -22,7 +21,6 @@ const elements = {
     logoutButton: byId('logout-button'),
     password: byId('password'),
     productStorageSelect: byId('product-storage-select'),
-    recipientSelect: byId('recipient-select'),
     storagesTab: byId('storages-tab'),
     productsTab: byId('products-tab'),
     storagesTabButton: byId('storages-tab-button'),
@@ -168,7 +166,6 @@ function logout() {
     setAuthStatus();
     state.storages = [];
     state.products = [];
-    state.recipients = [];
     render();
 }
 
@@ -179,7 +176,7 @@ async function loadAll() {
         return;
     }
 
-    await Promise.all([loadProductDictionaries(), loadStorages(), loadRecipients()]);
+    await Promise.all([loadProductDictionaries(), loadStorages()]);
     if (state.selectedStorageId) {
         await loadProducts();
     } else {
@@ -209,12 +206,6 @@ async function loadProducts() {
     });
     state.products = (read(data, 'collection') || [])
         .filter(product => !state.selectedStorageId || read(product, 'storageId') === state.selectedStorageId);
-}
-
-async function loadRecipients() {
-    state.recipients = await request('/api/notifications/recipients', {
-        headers: authHeaders()
-    });
 }
 
 async function loadProductDictionaries() {
@@ -315,102 +306,17 @@ async function deleteProduct(id) {
     showToast('Продукт удален.');
 }
 
-async function createInviteAndOpenTelegram() {
+async function openTelegramBot() {
     const bot = state.telegramBotUserName.replace('@', '').trim();
     if (!bot) {
         showToast('Username Telegram-бота не настроен в TELEGRAM_BOT_USERNAME.');
         return;
     }
 
-    const telegramWindow = window.open('about:blank', '_blank');
-    let invite;
-    try {
-        invite = await request('/api/notifications/invites/create', {
-            method: 'POST',
-            headers: authHeaders(true),
-            body: JSON.stringify({ expiresAt: null })
-        });
-    } catch (error) {
-        telegramWindow?.close();
-        throw error;
-    }
+    const telegramUrl = `https://t.me/${encodeURIComponent(bot)}?start=ui`;
+    window.open(telegramUrl, '_blank') ?? window.location.assign(telegramUrl);
 
-    const code = read(invite, 'code');
-    const telegramUrl = `https://t.me/${encodeURIComponent(bot)}?start=${encodeURIComponent(code)}`;
-    if (telegramWindow) {
-        telegramWindow.location.href = telegramUrl;
-    } else {
-        window.location.href = telegramUrl;
-    }
-
-    showToast(`Код ${code} создан. Telegram открыт.`);
-}
-
-async function subscribeSelectedRecipient() {
-    const recipientId = Number(elements.recipientSelect.value);
-    if (!recipientId) {
-        showToast('Сначала подключи Telegram-чат через код.');
-        return;
-    }
-
-    const storageIds = state.storages.map(storage => read(storage, 'id'));
-    if (storageIds.length === 0) {
-        showToast('Сначала создай хотя бы одно хранилище.');
-        return;
-    }
-
-    await request(`/api/notifications/recipients/${recipientId}/subscriptions`, {
-        method: 'POST',
-        headers: authHeaders(true),
-        body: JSON.stringify({
-            storageIds,
-            notifyBeforeDays: 3
-        })
-    });
-
-    showToast('Рассылка для чата включена.');
-}
-
-async function unsubscribeSelectedRecipient() {
-    const recipientId = Number(elements.recipientSelect.value);
-    if (!recipientId) {
-        showToast('Сначала выбери подключенный чат.');
-        return;
-    }
-
-    await request(`/api/notifications/recipients/${recipientId}/subscriptions`, {
-        method: 'DELETE',
-        headers: authHeaders()
-    });
-
-    showToast('Рассылка для чата выключена.');
-}
-
-async function unlinkSelectedRecipient() {
-    const recipientId = Number(elements.recipientSelect.value);
-    if (!recipientId) {
-        showToast('Сначала выбери подключенный чат.');
-        return;
-    }
-
-    const recipient = state.recipients.find(x => read(x, 'id') === recipientId);
-    const recipientName = read(recipient, 'displayName') || read(recipient, 'externalId') || `#${recipientId}`;
-    const confirmed = window.confirm(
-        `Отключить Telegram-чат "${recipientName}" от текущего профиля? Рассылка для него тоже будет удалена.`
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    await request(`/api/notifications/recipients/${recipientId}`, {
-        method: 'DELETE',
-        headers: authHeaders()
-    });
-
-    await loadRecipients();
-    renderRecipients();
-    showToast('Telegram-чат отключен от профиля.');
+    showToast('Telegram открыт. Бот пришлет ссылку на UI.');
 }
 
 function editStorage(storage) {
@@ -448,24 +354,6 @@ function resetProductForm() {
     byId('product-unit-type').value = 'Pieces';
     byId('product-barcode').value = '';
     byId('product-expiration').value = '';
-}
-
-function renderRecipients() {
-    const options = state.recipients.map(recipient => {
-        const option = document.createElement('option');
-        option.value = read(recipient, 'id');
-        option.textContent = `${read(recipient, 'displayName') || read(recipient, 'externalId')} (${read(recipient, 'channel')})`;
-        return option;
-    });
-
-    if (options.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'Нет подключенных чатов';
-        options.push(option);
-    }
-
-    elements.recipientSelect.replaceChildren(...options);
 }
 
 function renderProductStorageSelect() {
@@ -577,7 +465,6 @@ function getDictionaryDisplayName(dictionary, name) {
 function render() {
     setAuthStatus();
     renderTabs();
-    renderRecipients();
     renderProductStorageSelect();
     renderStorages();
     renderProducts();
@@ -633,14 +520,7 @@ function wireEvents() {
         await loadProducts();
         render();
     }));
-    byId('refresh-recipients-button').addEventListener('click', () => run(async () => {
-        await loadRecipients();
-        renderRecipients();
-    }));
-    byId('open-telegram-button').addEventListener('click', () => run(createInviteAndOpenTelegram));
-    byId('subscribe-recipient-button').addEventListener('click', () => run(subscribeSelectedRecipient));
-    byId('unsubscribe-recipient-button').addEventListener('click', () => run(unsubscribeSelectedRecipient));
-    byId('unlink-recipient-button').addEventListener('click', () => run(unlinkSelectedRecipient));
+    byId('open-telegram-button').addEventListener('click', () => run(openTelegramBot));
     byId('storage-form').addEventListener('submit', event => run(() => saveStorage(event)));
     byId('product-form').addEventListener('submit', event => run(() => saveProduct(event)));
     byId('reset-storage-button').addEventListener('click', resetStorageForm);

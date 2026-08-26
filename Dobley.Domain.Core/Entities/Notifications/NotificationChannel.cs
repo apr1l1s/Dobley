@@ -2,5 +2,7 @@ namespace Dobley.Domain.Core.Entities.Notifications;
 
 public enum NotificationChannel
 {
-    Telegram = 1
+    Telegram = 1,
+
+    Email = 2
 }

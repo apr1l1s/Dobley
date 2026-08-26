@@ -47,7 +47,6 @@ app
     .MapProductDictionaryEndpoints()
     .MapProductEndpoints()
     .MapStorageEndpoints()
-    .MapNotificationEndpoints()
     .MapAdminDatabaseEndpoints();
 
 app.Run();

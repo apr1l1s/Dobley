@@ -1,82 +1,79 @@
-using Dobley.Data.Core.Integrations.RabbitMq;
 using Dobley.Domain.Core.Entities.Notifications;
 using Dobley.Domain.Core.Repositories;
 using Dobley.Domain.Core.Repositories.Notifications;
 using Dobley.Domain.Core.Repositories.Products;
+using Dobley.Domain.Core.Repositories.Storages;
+using Dobley.Workers.Notifications.Options;
+using Microsoft.Extensions.Options;
 
 namespace Dobley.Workers.Notifications.ExpirationNotifications;
 
 public class ExpirationNotificationPublishingService(
     ICommonRepository commonRepository,
     INotificationDeliveryRepository deliveryRepository,
-    INotificationMessagePublisher notificationMessagePublisher,
+    INotificationOutboxMessageRepository outboxMessageRepository,
     IProductRepository productRepository,
-    IStorageNotificationSubscriptionRepository subscriptionRepository)
+    IStorageRepository storageRepository,
+    ILogger<ExpirationNotificationPublishingService> logger,
+    IOptions<ExpirationNotificationOptions> options)
     : IExpirationNotificationPublishingService
 {
+    private readonly ExpirationNotificationOptions _options = options.Value;
+
     public async Task PublishAsync(CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
-        var subscriptions = await subscriptionRepository.GetEnabledSubscriptionsAsync(cancellationToken);
-
-        if (subscriptions.Count == 0)
+        if (string.IsNullOrWhiteSpace(_options.Destination))
         {
+            logger.LogWarning("NOTIFICATION_DESTINATION не задан. Напоминания о сроке годности выключены.");
             return;
         }
 
-        var storageIds = subscriptions.Select(x => x.StorageId).Distinct().ToArray();
-        var maxNotifyBeforeDays = subscriptions.Max(x => x.NotifyBeforeDays);
-        var maxExpirationDate = today.AddDays(maxNotifyBeforeDays + 1);
+        var today = DateTime.UtcNow.Date;
+        var storageIds = await storageRepository.GetStorageIdsAsync(_options.NotificationUserName, cancellationToken);
+
+        if (storageIds.Count == 0)
+        {
+            logger.LogInformation(
+                "Для пользователя {UserName} нет хранилищ. Напоминания о сроке годности пропущены.",
+                _options.NotificationUserName);
+            return;
+        }
+
+        var maxExpirationDate = today.AddDays(_options.NotifyBeforeDays + 1);
         var products = await productRepository.GetExpiringProductsAsync(storageIds, today, maxExpirationDate,
             cancellationToken);
 
-        foreach (var subscription in subscriptions)
+        foreach (var product in products)
         {
-            await PublishForSubscription(subscription, products, today, cancellationToken);
+            await CreateOutboxMessageForProduct(product, today, cancellationToken);
         }
     }
 
-    private async Task PublishForSubscription(StorageNotificationSubscription subscription,
-        IReadOnlyList<Domain.Core.Entities.Products.Product> products, DateTime today,
-        CancellationToken cancellationToken)
-    {
-        var recipient = subscription.DomainNotificationRecipient;
-        if (recipient == null || recipient.Channel != NotificationChannel.Telegram)
-        {
-            return;
-        }
-
-        foreach (var product in products.Where(x => x.StorageId == subscription.StorageId))
-        {
-            await PublishForProduct(subscription, recipient, product, today, cancellationToken);
-        }
-    }
-
-    private async Task PublishForProduct(StorageNotificationSubscription subscription,
-        NotificationRecipient recipient, Domain.Core.Entities.Products.Product product, DateTime today,
+    private async Task CreateOutboxMessageForProduct(Domain.Core.Entities.Products.Product product, DateTime today,
         CancellationToken cancellationToken)
     {
         var expirationDate = product.ExpirationDate!.Value;
         var daysLeft = (expirationDate.Date - today).Days;
-        if (daysLeft > subscription.NotifyBeforeDays)
+        if (daysLeft > _options.NotifyBeforeDays)
         {
             return;
         }
 
-        if (await deliveryRepository.ExistsAsync(recipient.Id, product.Id, expirationDate,
-                recipient.Channel, cancellationToken))
+        if (await deliveryRepository.ExistsAsync(_options.NotificationUserName, _options.Channel,
+                _options.Destination!, product.Id, expirationDate, cancellationToken))
         {
             return;
         }
 
-        var storageName = product.DomainStorage?.Name ?? subscription.DomainStorage?.Name ?? "Хранилище";
-        var message = ExpirationNotificationMessageFactory.Create(product.Name, storageName, expirationDate, daysLeft);
+        var storageName = product.DomainStorage?.Name ?? "Хранилище";
+        var subject = $"Срок годности продукта {product.Name}";
+        var body = ExpirationNotificationMessageFactory.Create(product.Name, storageName, expirationDate, daysLeft);
 
-        await notificationMessagePublisher.PublishAsync(new TelegramNotificationMessage(recipient.ExternalId, message),
-            cancellationToken);
+        await deliveryRepository.AddAsync(NotificationDelivery.Create(_options.NotificationUserName, _options.Channel,
+            _options.Destination!, product.Id, expirationDate, subject, body), cancellationToken);
 
-        await deliveryRepository.AddAsync(NotificationDelivery.Create(recipient.Id, product.Id,
-            expirationDate, recipient.Channel), cancellationToken);
+        await outboxMessageRepository.AddAsync(NotificationOutboxMessage.Create(_options.Channel,
+            _options.Destination!, subject, body), cancellationToken);
         await commonRepository.SaveChangesAsync(cancellationToken);
     }
 }

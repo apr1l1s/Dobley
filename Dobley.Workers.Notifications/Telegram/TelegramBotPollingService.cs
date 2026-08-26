@@ -2,10 +2,10 @@ using Dobley.Data.Core.Integrations.Telegram;
 
 namespace Dobley.Workers.Notifications.Telegram;
 
-public class TelegramBotLinkingService(
+public class TelegramBotPollingService(
     IServiceProvider services,
     ITelegramBotClient telegramBotClient,
-    ILogger<TelegramBotLinkingService> logger)
+    ILogger<TelegramBotPollingService> logger)
     : BackgroundService
 {
     private long _offset;
@@ -14,7 +14,7 @@ public class TelegramBotLinkingService(
     {
         if (!telegramBotClient.IsConfigured)
         {
-            logger.LogWarning("TELEGRAM_BOT_TOKEN is empty. Telegram bot linking is disabled.");
+            logger.LogWarning("TELEGRAM_BOT_TOKEN is empty. Telegram bot polling is disabled.");
             return;
         }
 

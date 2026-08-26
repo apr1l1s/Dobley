@@ -1,4 +1,5 @@
 using Dobley.Domain.Core.Entities.Products;
+using Dobley.Domain.Core.Entities.Users;
 using Dobley.Domain.Core.Errors.Entities;
 
 namespace Dobley.Domain.Core.Entities.Notifications;
@@ -8,17 +9,23 @@ public class NotificationDelivery
 {
     public int Id { get; set; }
 
-    public int NotificationRecipientId { get; private set; }
+    public string UserName { get; private set; } = null!;
+
+    public NotificationChannel Channel { get; private set; }
+
+    public string Destination { get; private set; } = null!;
 
     public int ProductId { get; private set; }
 
     public DateTime ExpirationDate { get; private set; }
 
-    public NotificationChannel Channel { get; private set; }
+    public string Subject { get; private set; } = null!;
 
-    public NotificationRecipient? DomainNotificationRecipient { get; private set; }
+    public string Body { get; private set; } = null!;
 
     public Product? DomainProduct { get; private set; }
+
+    public User? DomainUser { get; private set; }
 
     public DateTime DateAdded { get; private set; }
 
@@ -28,12 +35,17 @@ public class NotificationDelivery
     {
     }
 
-    public static NotificationDelivery Create(int notificationRecipientId, int productId,
-        DateTime expirationDate, NotificationChannel channel)
+    public static NotificationDelivery Create(string userName, NotificationChannel channel, string destination,
+        int productId, DateTime expirationDate, string subject, string body)
     {
-        if (notificationRecipientId <= 0)
+        if (userName.IsNullOrEmpty() || userName.Length > 100)
         {
-            throw new DomainValidateNotificationException("Неизвестный получатель уведомлений");
+            throw new DomainValidateNotificationException("Логин владельца уведомления должен быть заполнен");
+        }
+
+        if (destination.IsNullOrEmpty() || destination.Length > 300)
+        {
+            throw new DomainValidateNotificationException("Адрес доставки уведомления должен быть заполнен");
         }
 
         if (productId <= 0)
@@ -41,12 +53,25 @@ public class NotificationDelivery
             throw new DomainValidateNotificationException("Неизвестный продукт для уведомления");
         }
 
+        if (subject.IsNullOrEmpty() || subject.Length > 200)
+        {
+            throw new DomainValidateNotificationException("Заголовок уведомления должен быть заполнен");
+        }
+
+        if (body.IsNullOrEmpty() || body.Length > 2000)
+        {
+            throw new DomainValidateNotificationException("Текст уведомления должен быть заполнен");
+        }
+
         return new NotificationDelivery
         {
-            NotificationRecipientId = notificationRecipientId,
+            UserName = userName,
+            Channel = channel,
+            Destination = destination,
             ProductId = productId,
             ExpirationDate = expirationDate.Date,
-            Channel = channel
+            Subject = subject,
+            Body = body
         };
     }
 

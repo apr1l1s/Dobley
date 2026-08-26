@@ -207,11 +207,10 @@ public static class DependencyInjection
             .AddScoped<ICommonRepository, CommonRepository>()
             .AddScoped<IHealthCheckRepository, HealthCheckRepository>()
             .AddScoped<INotificationDeliveryRepository, NotificationDeliveryRepository>()
-            .AddScoped<INotificationInviteRepository, NotificationInviteRepository>()
-            .AddScoped<INotificationRecipientRepository, NotificationRecipientRepository>()
+            .AddScoped<INotificationInboxMessageRepository, NotificationInboxMessageRepository>()
+            .AddScoped<INotificationOutboxMessageRepository, NotificationOutboxMessageRepository>()
             .AddScoped<IProductRepository, ProductRepository>()
             .AddScoped<IStorageRepository, StorageRepository>()
-            .AddScoped<IStorageNotificationSubscriptionRepository, StorageNotificationSubscriptionRepository>()
             .AddScoped<IUserRepository, UserRepository>();
 
         return services;

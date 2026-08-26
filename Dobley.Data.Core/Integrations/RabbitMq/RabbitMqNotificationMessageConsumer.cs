@@ -10,7 +10,7 @@ public class RabbitMqNotificationMessageConsumer(RabbitMqOptions rabbitMqOptions
     ILogger<RabbitMqNotificationMessageConsumer> logger)
     : INotificationMessageConsumer
 {
-    public async Task ConsumeAsync(Func<TelegramNotificationMessage, CancellationToken, Task> handleMessage,
+    public async Task ConsumeAsync(Func<NotificationMessage, CancellationToken, Task> handleMessage,
         CancellationToken cancellationToken)
     {
         var factory = CreateConnectionFactory();
@@ -62,6 +62,6 @@ public class RabbitMqNotificationMessageConsumer(RabbitMqOptions rabbitMqOptions
             DispatchConsumersAsync = true
         };
 
-    private static TelegramNotificationMessage? DeserializeMessage(byte[] body)
-        => JsonSerializer.Deserialize<TelegramNotificationMessage>(Encoding.UTF8.GetString(body));
+    private static NotificationMessage? DeserializeMessage(byte[] body)
+        => JsonSerializer.Deserialize<NotificationMessage>(Encoding.UTF8.GetString(body));
 }
