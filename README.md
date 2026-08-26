@@ -321,6 +321,9 @@ Gateway health возвращает 200
 .github/workflows/docker.yml  публикация Docker images в GitHub Container Registry
 ```
 
+В GitHub Actions эти процессы отображаются как `Проверка проекта` и `Публикация Docker images`.
+Оба workflow поддерживают ручной запуск через кнопку `Run workflow`; при ручном запуске можно указать причину запуска.
+
 CI выполняет:
 
 ```text

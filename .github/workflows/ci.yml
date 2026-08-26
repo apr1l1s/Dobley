@@ -1,7 +1,13 @@
-name: CI
+name: Проверка проекта
+run-name: Проверка Dobley для ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
+    inputs:
+      reason:
+        description: Причина ручного запуска
+        required: false
+        default: Ручная проверка проекта
   pull_request:
     branches:
       - master
@@ -19,31 +25,31 @@ env:
 
 jobs:
   dotnet:
-    name: .NET build and tests
+    name: Сборка, тесты и миграции
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Получить исходный код
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Установить .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
 
-      - name: Restore
+      - name: Восстановить NuGet-пакеты
         run: dotnet restore Dobley.sln
 
-      - name: Build
+      - name: Собрать решение
         run: dotnet build Dobley.sln --configuration Release --no-restore
 
-      - name: Test
+      - name: Запустить тесты
         run: dotnet test Dobley.sln --configuration Release --no-build
 
-      - name: Install EF tools
+      - name: Установить EF Core tools
         run: dotnet tool install dotnet-ef --version 9.0.16 --tool-path .tools
 
-      - name: Generate migration script
+      - name: Сгенерировать SQL-скрипт миграций
         run: |
           mkdir -p artifacts
           .tools/dotnet-ef migrations script \
@@ -54,14 +60,14 @@ jobs:
             --startup-project Dobley.Data.Core \
             --output artifacts/migrations.sql
 
-      - name: Upload migration script
+      - name: Сохранить SQL-скрипт миграций
         uses: actions/upload-artifact@v4
         with:
           name: migrations.sql
           path: artifacts/migrations.sql
 
   docker:
-    name: Docker validation
+    name: Docker-сборка ${{ matrix.title }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -69,35 +75,40 @@ jobs:
       matrix:
         include:
           - name: api
+            title: API
             dockerfile: Dobley.Endpoints.Api/Dockerfile
           - name: auth
+            title: Auth
             dockerfile: Dobley.Endpoints.Auth/Dockerfile
           - name: gateway
+            title: Gateway
             dockerfile: Dobley.Endpoints.Gateway/Dockerfile
           - name: ui
+            title: UI
             dockerfile: Dobley.Endpoints.Ui/Dockerfile
           - name: notifications
+            title: Notifications
             dockerfile: Dobley.Workers.Notifications/Dockerfile
 
     steps:
-      - name: Checkout
+      - name: Получить исходный код
         uses: actions/checkout@v4
 
-      - name: Validate compose file
+      - name: Проверить compose.yaml
         run: docker compose -f compose.yaml config --quiet
 
-      - name: Build ${{ matrix.name }} image
+      - name: Собрать Docker image ${{ matrix.title }}
         run: docker build --file ${{ matrix.dockerfile }} --tag dobley.${{ matrix.name }}:ci .
 
   repository-hygiene:
-    name: Repository hygiene
+    name: Чистота репозитория
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Получить исходный код
         uses: actions/checkout@v4
 
-      - name: Check Telegram token is not committed
+      - name: Проверить, что Telegram token не закоммичен
         run: |
           if grep -RInE 'TELEGRAM_BOT_TOKEN=[0-9]{8,}:[A-Za-z0-9_-]{25,}|[0-9]{8,}:[A-Za-z0-9_-]{25,}' \
             --exclude-dir=.git \
