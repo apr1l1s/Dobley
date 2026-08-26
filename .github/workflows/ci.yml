@@ -1,5 +1,5 @@
 name: Проверка проекта
-run-name: Проверка Dobley для ${{ github.ref_name }}
+run-name: Проверка Dobley для ${{ github.ref_name }} / ${{ github.event.inputs.reason || github.event_name }}
 
 on:
   workflow_dispatch:
@@ -19,14 +19,19 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
 jobs:
   dotnet:
     name: Сборка, тесты и миграции
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Получить исходный код
@@ -36,6 +41,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
+
+      - name: Включить кеш NuGet
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
       - name: Восстановить NuGet-пакеты
         run: dotnet restore Dobley.sln
@@ -66,9 +79,23 @@ jobs:
           name: migrations.sql
           path: artifacts/migrations.sql
 
+      - name: Записать краткий отчёт
+        run: |
+          {
+            echo "## Проверка проекта"
+            echo ""
+            echo "- Ветка: \`${{ github.ref_name }}\`"
+            echo "- Коммит: \`${{ github.sha }}\`"
+            echo "- Причина запуска: \`${{ github.event.inputs.reason || github.event_name }}\`"
+            echo "- Сборка: Release"
+            echo "- Тесты: выполнены"
+            echo "- Миграции: SQL-скрипт сохранён в artifact \`migrations.sql\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   docker:
     name: Docker-сборка ${{ matrix.title }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -98,11 +125,22 @@ jobs:
         run: docker compose -f compose.yaml config --quiet
 
       - name: Собрать Docker image ${{ matrix.title }}
-        run: docker build --file ${{ matrix.dockerfile }} --tag dobley.${{ matrix.name }}:ci .
+        run: docker build --build-arg BUILD_CONFIGURATION=Release --file ${{ matrix.dockerfile }} --tag dobley.${{ matrix.name }}:ci .
+
+      - name: Записать краткий отчёт
+        run: |
+          {
+            echo "## Docker-сборка ${{ matrix.title }}"
+            echo ""
+            echo "- Dockerfile: \`${{ matrix.dockerfile }}\`"
+            echo "- Image: \`dobley.${{ matrix.name }}:ci\`"
+            echo "- Compose-файл: проверен"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   repository-hygiene:
     name: Чистота репозитория
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Получить исходный код
@@ -119,3 +157,12 @@ jobs:
             echo "::error::В репозитории найден похожий на Telegram token секрет."
             exit 1
           fi
+
+      - name: Записать краткий отчёт
+        run: |
+          {
+            echo "## Чистота репозитория"
+            echo ""
+            echo "- Telegram token: не найден"
+            echo "- Проверены исходники без \`.git\`, \`bin\` и \`obj\`"
+          } >> "$GITHUB_STEP_SUMMARY"

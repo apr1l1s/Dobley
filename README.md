@@ -336,6 +336,8 @@ docker build для API, Auth, Gateway, UI и Notifications
 проверку, что Telegram token не попал в репозиторий
 ```
 
+Для ускорения повторных запусков используется кеш NuGet-пакетов. Каждый job ограничен таймаутом, а в конце выполнения пишет краткий отчёт в GitHub Step Summary: ветка, коммит, причина запуска, результат миграций, собранные Docker images и найденные проблемы репозитория.
+
 На push в `master` Docker workflow публикует образы в `ghcr.io` с тегами `latest` и `sha-<commit>`.
 Для публикации используется стандартный `GITHUB_TOKEN`, поэтому дополнительных secrets для GHCR не требуется.
 Секреты приложения, например `TELEGRAM_BOT_TOKEN`, `SECRET_KEY`, `DB_PASSWORD` и `RABBITMQ_PASSWORD`, должны храниться в GitHub Secrets и передаваться только на этапе реального деплоя.

@@ -1,5 +1,5 @@
 name: Публикация Docker images
-run-name: Публикация Docker images для ${{ github.ref_name }}
+run-name: Публикация Docker images для ${{ github.ref_name }} / ${{ github.event.inputs.reason || github.event_name }}
 
 on:
   workflow_dispatch:
@@ -27,6 +27,7 @@ jobs:
   publish:
     name: Опубликовать ${{ matrix.title }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -72,7 +73,20 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          build-args: |
+            BUILD_CONFIGURATION=Release
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ github.sha }}
+
+      - name: Записать краткий отчёт
+        run: |
+          {
+            echo "## Опубликован image ${{ matrix.title }}"
+            echo ""
+            echo "- Dockerfile: \`${{ matrix.dockerfile }}\`"
+            echo "- Registry: \`${{ env.REGISTRY }}\`"
+            echo "- latest: \`${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest\`"
+            echo "- sha: \`${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
