@@ -98,10 +98,11 @@ jobs:
 
       - name: Check Telegram token is not committed
         run: |
-          if grep -RInE '8903854111|AAF2dofCmSsU12LJdYwcJX2z9BKhfTov7Y8|TELEGRAM_BOT_TOKEN=.+:' \
+          if grep -RInE 'TELEGRAM_BOT_TOKEN=[0-9]{8,}:[A-Za-z0-9_-]{25,}|[0-9]{8,}:[A-Za-z0-9_-]{25,}' \
             --exclude-dir=.git \
             --exclude-dir=bin \
             --exclude-dir=obj \
+            --exclude='.github/workflows/ci.yml' \
             .; then
             echo "::error::В репозитории найден похожий на Telegram token секрет."
             exit 1
