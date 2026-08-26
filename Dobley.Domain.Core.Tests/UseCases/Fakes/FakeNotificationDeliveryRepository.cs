@@ -27,13 +27,14 @@ public class FakeNotificationDeliveryRepository(params NotificationDelivery[] de
     {
     }
 
-    public Task<bool> ExistsAsync(int notificationRecipientId, int productId, DateTime expirationDate,
-        NotificationChannel channel, CancellationToken cancellationToken = default)
+    public Task<bool> ExistsAsync(string userName, NotificationChannel channel, string destination, int productId,
+        DateTime expirationDate, CancellationToken cancellationToken = default)
         => Task.FromResult(_deliveries.Any(x =>
-            x.NotificationRecipientId == notificationRecipientId &&
+            x.UserName == userName &&
+            x.Channel == channel &&
+            x.Destination == destination &&
             x.ProductId == productId &&
-            x.ExpirationDate == expirationDate.Date &&
-            x.Channel == channel));
+            x.ExpirationDate == expirationDate.Date));
 
     public Task<IReadOnlyList<NotificationDelivery>> GetCollectionAsync(CancellationToken cancellationToken = default,
         params int[] ids)

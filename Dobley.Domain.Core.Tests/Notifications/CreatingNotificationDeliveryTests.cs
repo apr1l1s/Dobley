@@ -17,13 +17,16 @@ public class CreatingNotificationDeliveryTests
 
         var delivery = CreateDelivery(testCase);
 
-        Assert.Equal(testCase.ExpectedRecipientId, delivery.NotificationRecipientId);
+        Assert.Equal(testCase.UserName, delivery.UserName);
+        Assert.Equal(testCase.Destination, delivery.Destination);
         Assert.Equal(testCase.ExpectedProductId, delivery.ProductId);
         Assert.Equal(testCase.ExpirationDate.Date, delivery.ExpirationDate);
         Assert.Equal(testCase.Channel, delivery.Channel);
+        Assert.Equal(testCase.Subject, delivery.Subject);
+        Assert.Equal(testCase.Body, delivery.Body);
     }
 
     private static NotificationDelivery CreateDelivery(CreatingNotificationDeliveryTestCase testCase)
-        => NotificationDelivery.Create(testCase.NotificationRecipientId, testCase.ProductId,
-            testCase.ExpirationDate, testCase.Channel);
+        => NotificationDelivery.Create(testCase.UserName, testCase.Channel, testCase.Destination,
+            testCase.ProductId, testCase.ExpirationDate, testCase.Subject, testCase.Body);
 }
